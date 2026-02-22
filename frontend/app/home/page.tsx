@@ -1,7 +1,7 @@
 'use client';
 
 import { Menu, UserCircle, Plus } from 'lucide-react';
-import ShinyText from '../components/ShinyText';
+import ShinyText from '@/components/ui/ShinyText';
 
 const MOCK_CLIENTS = [
   { id: '1', name: 'Rohan .S', img: 'https://i.pravatar.cc/150?u=1' },
