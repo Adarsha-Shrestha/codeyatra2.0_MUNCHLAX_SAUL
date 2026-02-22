@@ -1,17 +1,18 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 
 @theme {
-  --color-nblm-bg: #1e1e20;
-  --color-nblm-panel: #28282c;
-  --color-nblm-border: #3f3f46;
-  --color-nblm-text: #e4e4e7;
-  --color-nblm-text-muted: #a1a1aa;
-  --color-nblm-accent: #f97316;
+  --color-nblm-bg: #1f1b16;
+  --color-nblm-panel: #030301;
+  --color-nblm-border: #403c35;
+  --color-nblm-text: #887d73;
+  --color-nblm-text-muted: #675e53;
+  --color-nblm-accent: #887d73;
 }
 
 :root {
-  --background: #1e1e20;
-  --foreground: #e4e4e7;
+  --background: #1f1b16;
+  --foreground: #887d73;
 }
 
 body {
@@ -32,10 +33,14 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: #403c35;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background: #675e53;
+}
+
+.font-safari {
+  font-family: "Faraz Modern", "Playfair Display", serif;
 }

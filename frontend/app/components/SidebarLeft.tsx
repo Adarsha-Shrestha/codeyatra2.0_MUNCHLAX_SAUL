@@ -85,7 +85,7 @@ export default function SidebarLeft({ onToggle, onSourceSelect }: SidebarLeftPro
             <div className="px-4 pb-4">
                 <button
                     onClick={() => setIsAddModalOpen(true)}
-                    className="w-full flex items-center justify-center gap-2 bg-nblm-panel hover:bg-zinc-700 text-sm font-medium py-2 rounded-full border border-nblm-border transition-colors text-white"
+                    className="w-full flex items-center justify-center gap-2 bg-nblm-panel hover:bg-[#2b2520] text-sm font-medium py-2 rounded-full border border-nblm-border transition-colors text-white"
                 >
                     <Plus className="w-4 h-4" />
                     Add sources
@@ -98,16 +98,16 @@ export default function SidebarLeft({ onToggle, onSourceSelect }: SidebarLeftPro
                     <input
                         type="text"
                         placeholder="Search the web for new sources"
-                        className="w-full bg-zinc-900 border border-nblm-border rounded-full py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-zinc-500 placeholder-zinc-500 text-white"
+                        className="w-full bg-[#181511] border border-nblm-border rounded-full py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-nblm-text-muted placeholder-zinc-500 text-nblm-text"
                     />
                 </div>
             </div>
 
             <div className="px-4 pb-4 flex gap-2">
-                <button className="flex items-center gap-1.5 bg-zinc-800 text-xs px-3 py-1 rounded-full border border-nblm-border hover:bg-zinc-700 transition-colors text-zinc-300">
+                <button className="flex items-center gap-1.5 bg-[#2b2520] text-xs px-3 py-1 rounded-full border border-nblm-border hover:bg-nblm-border transition-colors text-nblm-text">
                     <Search className="w-3 h-3 text-zinc-400" /> Web
                 </button>
-                <button className="flex justify-between items-center gap-1.5 bg-zinc-800 text-xs px-3 py-1 rounded-full border border-nblm-border hover:bg-zinc-700 transition-colors flex-1 text-zinc-300">
+                <button className="flex justify-between items-center gap-1.5 bg-[#2b2520] text-xs px-3 py-1 rounded-full border border-nblm-border hover:bg-nblm-border transition-colors flex-1 text-nblm-text">
                     <span className="flex items-center gap-1.5"><Search className="w-3 h-3 text-zinc-400" /> Fast Research</span>
                     <ChevronRight className="w-3 h-3 text-zinc-400" />
                 </button>
@@ -136,18 +136,18 @@ export default function SidebarLeft({ onToggle, onSourceSelect }: SidebarLeftPro
                                 onClick={() => onSourceSelect(source)}
                                 className="px-4 py-2 flex items-start gap-3 hover:bg-zinc-800/50 cursor-pointer group transition-colors"
                             >
-                                <div className="bg-zinc-800 p-1.5 rounded mt-0.5 border border-zinc-700">
+                                <div className="bg-[#181511] p-1.5 rounded mt-0.5 border border-nblm-border">
                                     {getIconForSource(source)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[13px] text-zinc-300 truncate font-medium">{source.title}</p>
+                                    <p className="text-[13px] text-nblm-text truncate font-medium">{source.title}</p>
                                     <p className="text-[10px] text-zinc-500 mt-0.5 capitalize">Type {source.dataType} • {source.sourceType}</p>
                                 </div>
                                 <button
                                     onClick={(e) => toggleSelection(source.id, e)}
                                     className={`w-4 h-4 rounded border flex items-center justify-center mt-1 shrink-0 transition-all ${selectedIds.has(source.id)
-                                            ? 'bg-primary border-primary'
-                                            : 'bg-transparent border-zinc-600 group-hover:border-zinc-500'
+                                        ? 'bg-primary border-primary'
+                                        : 'bg-transparent border-zinc-600 group-hover:border-zinc-500'
                                         }`}
                                 >
                                     {selectedIds.has(source.id) && <Check className="w-3 h-3 text-white" />}

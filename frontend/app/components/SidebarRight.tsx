@@ -38,12 +38,12 @@ export default function SidebarRight({ markdownContent, onSourceClick, onToggle 
                         <button
                             key={idx}
                             onClick={() => onSourceClick(heading.text)}
-                            className="w-full text-left cursor-pointer text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-lg px-2 py-1.5 transition-colors truncate block"
+                            className="w-full text-left cursor-pointer text-sm text-zinc-400 hover:text-nblm-text hover:bg-[#2b2520] rounded-lg px-2 py-1.5 transition-colors truncate block"
                             style={{ paddingLeft: `${(heading.level - 1) * 14 + 8}px`, fontSize: heading.level === 1 ? '13px' : heading.level === 2 ? '12px' : '11px' }}
                             title={heading.text}
                         >
                             {heading.level <= 2 ? (
-                                <span className={heading.level === 1 ? 'font-semibold text-zinc-200' : 'font-medium text-zinc-300'}>
+                                <span className={heading.level === 1 ? 'font-semibold text-nblm-text' : 'font-medium text-nblm-text-muted'}>
                                     {heading.text}
                                 </span>
                             ) : (

@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Settings2, MoreVertical, ThumbsUp, ThumbsDown, Copy, ArrowUp, X, PanelLeft, PanelRight, Link as LinkIcon } from 'lucide-react';
+import { Settings2, MoreVertical, ThumbsUp, ThumbsDown, Copy, ArrowUp, X, PanelLeft, PanelRight, Link as LinkIcon, Menu } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import BlurText from './BlurText';
+import SplitText from './SplitText';
 import { SourceInfo } from './SidebarLeft';
 
 interface ChatAreaProps {
@@ -9,11 +12,30 @@ interface ChatAreaProps {
     rightOpen?: boolean;
     onToggleLeft?: () => void;
     onToggleRight?: () => void;
+    userName?: string;
 }
 
-export default function ChatArea({ activeSource, onClearSource, leftOpen, rightOpen, onToggleLeft, onToggleRight }: ChatAreaProps) {
+interface Message {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+export default function ChatArea({
+    activeSource,
+    onClearSource,
+    leftOpen,
+    rightOpen,
+    onToggleLeft,
+    onToggleRight,
+    userName = "Rohan"
+}: ChatAreaProps) {
     const [textContent, setTextContent] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+
+    // Chat state
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [inputValue, setInputValue] = useState('');
 
     useEffect(() => {
         if (typeof activeSource !== 'string' && activeSource?.fileType.includes('text')) {
@@ -43,6 +65,30 @@ export default function ChatArea({ activeSource, onClearSource, leftOpen, rightO
         }
     };
 
+    const handleSendMessage = () => {
+        if (!inputValue.trim()) return;
+        const newMsg: Message = { id: Date.now().toString(), role: 'user', content: inputValue };
+        setMessages(prev => [...prev, newMsg]);
+        setInputValue('');
+
+        // Simulate AI response
+        setTimeout(() => {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: "I am SAUL. I'm currently in development, but I'll soon be able to assist you with the sources you've uploaded!"
+            }]);
+        }, 1000);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    };
+
+    // If a source is selected from sidebar/TOC, show the source viewer
     if (activeSource) {
         const isString = typeof activeSource === 'string';
         const sourceObj = !isString ? (activeSource as SourceInfo) : null;
@@ -52,19 +98,19 @@ export default function ChatArea({ activeSource, onClearSource, leftOpen, rightO
 
         return (
             <div className="flex-1 flex flex-col bg-nblm-panel h-full relative overflow-hidden">
-                <div className="p-4 flex items-center justify-between border-b border-nblm-border shrink-0 bg-nblm-panel sticky top-0 z-10">
+                <div className="p-4 flex items-center justify-between border-b border-zinc-800 shrink-0 bg-nblm-panel sticky top-0 z-10 shadow-sm">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={onToggleLeft}
                             title={leftOpen ? 'Collapse sources' : 'Expand sources'}
-                            className={`hidden md:flex hover:text-white transition-colors p-1 ${leftOpen ? 'text-zinc-400' : 'text-white'}`}
+                            className={`hidden md:flex hover:text-white transition-colors p-1 ${leftOpen ? 'text-zinc-500' : 'text-zinc-300'}`}
                         >
                             <PanelLeft className="w-4 h-4" />
                         </button>
                         <h2 className="text-[13px] font-medium text-zinc-400 tracking-wide flex items-center gap-2 truncate max-w-[200px] md:max-w-md">
                             <span className="truncate">{title}</span>
                             {!isString && sourceObj && (
-                                <span className="bg-zinc-800 text-[10px] px-1.5 py-0.5 rounded text-zinc-500 uppercase tracking-wider shrink-0">
+                                <span className="bg-zinc-800/80 text-[10px] px-1.5 py-0.5 rounded text-zinc-400 uppercase tracking-wider shrink-0 border border-zinc-700/50">
                                     Type {sourceObj.dataType}
                                 </span>
                             )}
@@ -75,18 +121,18 @@ export default function ChatArea({ activeSource, onClearSource, leftOpen, rightO
                             <button
                                 onClick={handleSaveText}
                                 disabled={isSaving}
-                                className="bg-primary hover:bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors font-medium disabled:opacity-50"
+                                className="bg-zinc-200 hover:bg-white text-zinc-900 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors font-semibold disabled:opacity-50"
                             >
                                 {isSaving ? 'Saving...' : 'Save Edits'}
                             </button>
                         )}
-                        <button onClick={onClearSource} title="Close source view" className="hover:text-white text-zinc-400 transition-colors p-1 ml-2">
+                        <button onClick={onClearSource} title="Close source view" className="hover:text-white text-zinc-400 transition-colors p-1 ml-2 bg-zinc-800/50 hover:bg-zinc-700 rounded-full">
                             <X className="w-4 h-4" />
                         </button>
                         <button
                             onClick={onToggleRight}
                             title={rightOpen ? 'Collapse contents' : 'Expand contents'}
-                            className={`hidden md:flex hover:text-white transition-colors p-1 ${rightOpen ? 'text-zinc-400' : 'text-white'}`}
+                            className={`hidden md:flex hover:text-white transition-colors p-1 ${rightOpen ? 'text-zinc-500' : 'text-zinc-300'}`}
                         >
                             <PanelRight className="w-4 h-4" />
                         </button>
@@ -96,8 +142,8 @@ export default function ChatArea({ activeSource, onClearSource, leftOpen, rightO
                 <div className={`flex-1 overflow-hidden flex flex-col ${isPdf ? '' : 'p-6 md:p-8'}`}>
                     {isString ? (
                         <>
-                            <h1 className="text-2xl font-bold text-white mb-6 border-b border-nblm-border pb-4 w-full md:max-w-4xl mx-auto">{activeSource}</h1>
-                            <p className="text-zinc-300 leading-relaxed md:max-w-4xl mx-auto text-sm md:text-base">
+                            <h1 className="text-2xl font-bold text-nblm-text mb-6 border-b border-nblm-border pb-4 w-full md:max-w-4xl mx-auto">{activeSource}</h1>
+                            <p className="text-nblm-text-muted leading-relaxed md:max-w-4xl mx-auto text-sm md:text-base">
                                 This is a simulated view of the source material for the section: "{activeSource}".
                                 In a full implementation, the actual markdown content for this section would be parsed and rendered here,
                                 allowing the user to read the source document seamlessly.
@@ -105,7 +151,7 @@ export default function ChatArea({ activeSource, onClearSource, leftOpen, rightO
                         </>
                     ) : isText ? (
                         <textarea
-                            className="w-full h-full bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 text-zinc-300 font-mono text-sm md:text-base resize-none focus:outline-none focus:border-zinc-700 leading-relaxed max-w-5xl mx-auto"
+                            className="w-full h-full bg-transparent border-0 rounded-xl p-6 text-nblm-text font-mono text-sm md:text-base resize-none focus:outline-none leading-relaxed max-w-5xl mx-auto"
                             value={textContent}
                             onChange={(e) => setTextContent(e.target.value)}
                             placeholder="Type to edit this document..."
@@ -113,11 +159,11 @@ export default function ChatArea({ activeSource, onClearSource, leftOpen, rightO
                     ) : isPdf ? (
                         <iframe
                             src={sourceObj!.url}
-                            className="w-full h-full border-none bg-zinc-900"
+                            className="w-full h-full border-none bg-nblm-panel"
                             title={title}
                         />
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-zinc-500">
+                        <div className="flex flex-col items-center justify-center h-full text-nblm-text-muted">
                             <LinkIcon className="w-12 h-12 mb-4 opacity-50" />
                             <p>Cannot preview this file type natively.</p>
                             <a href={sourceObj!.url} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline mt-2 text-sm">Download File</a>
@@ -128,102 +174,106 @@ export default function ChatArea({ activeSource, onClearSource, leftOpen, rightO
         );
     }
 
+    // Default Chat View
     return (
         <div className="flex-1 flex flex-col bg-nblm-panel h-full relative overflow-hidden">
-            <div className="p-4 flex items-center justify-between border-b border-nblm-border shrink-0 bg-nblm-panel sticky top-0 z-10">
+            <div className="p-4 flex items-center justify-between border-b border-transparent shrink-0 bg-transparent sticky top-0 z-10 transition-colors">
                 <div className="flex items-center gap-2">
-                    {/* Left sidebar toggle — shown in chat header when on desktop */}
                     <button
                         onClick={onToggleLeft}
                         title={leftOpen ? 'Collapse sources' : 'Expand sources'}
-                        className={`hidden md:flex hover:text-white transition-colors p-1 ${leftOpen ? 'text-zinc-400' : 'text-white'}`}
+                        className={`hidden md:flex hover:text-white transition-colors p-1 ${leftOpen ? 'text-zinc-500' : 'text-nblm-text'}`}
                     >
                         <PanelLeft className="w-4 h-4" />
                     </button>
-                    <h2 className="text-[13px] font-medium text-zinc-400 tracking-wide">Chat</h2>
+                    {messages.length > 0 ? (
+                        <div className="flex items-center gap-2 overflow-hidden">
+                            <motion.img
+                                layoutId="saul-logo"
+                                src="/logo.png"
+                                alt="SAUL Logo"
+                                className="w-6 h-6 object-contain"
+                            />
+                            <motion.h2
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="text-[13px] font-medium text-zinc-400 tracking-wide"
+                            >
+                                Chat
+                            </motion.h2>
+                        </div>
+                    ) : (
+                        <div className="w-6 h-6" /> // Placeholder to keep header height
+                    )}
                 </div>
                 <div className="flex gap-2 text-zinc-400 items-center">
-                    <button className="hover:text-white transition-colors p-1"><Settings2 className="w-4 h-4" /></button>
-                    <button className="hover:text-white transition-colors p-1"><MoreVertical className="w-4 h-4" /></button>
-                    {/* Right sidebar toggle */}
+                    <button className="hover:text-nblm-text transition-colors p-1"><Settings2 className="w-4 h-4" /></button>
+                    <button className="hover:text-nblm-text transition-colors p-1"><MoreVertical className="w-4 h-4" /></button>
                     <button
                         onClick={onToggleRight}
                         title={rightOpen ? 'Collapse contents' : 'Expand contents'}
-                        className={`hidden md:flex hover:text-white transition-colors p-1 ${rightOpen ? 'text-zinc-400' : 'text-white'}`}
+                        className={`hidden md:flex hover:text-nblm-text transition-colors p-1 ${rightOpen ? 'text-zinc-500' : 'text-nblm-text'}`}
                     >
                         <PanelRight className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 space-y-6 pb-40 scroll-smooth">
-                <div className="text-[14px] leading-relaxed text-zinc-300 max-w-3xl mx-auto space-y-4">
-                    <p>
-                        • ÷ (Division): Used for queries involving the phrase "for all," acting essentially as the inverse of the Cartesian product <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300 ml-1">3</span> .
-                    </p>
-                    <p>
-                        • ⟕ (Left Outer Join): Includes all matching tuples from both relations plus unmatched tuples from the left relation padded with nulls <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300 ml-1">11</span> <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300">12</span> .
-                    </p>
-                    <p>
-                        • ⟖ (Right Outer Join): Includes all matching tuples from both relations plus unmatched tuples from the right relation padded with nulls <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300 ml-1">13</span> .
-                    </p>
-                    <p>
-                        • ⟗ (Full Outer Join): Includes matching tuples from both relations and all unmatched tuples from both sides padded with nulls <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300 ml-1">14</span> <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300">15</span> .
-                    </p>
-                    <p>
-                        • ρ (Rename): Used to provide a name to the result of a relational algebraic expression or to rename specific attributes <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300 ml-1">16</span> .
-                    </p>
-                    <p>
-                        • ← (Assignment): Assigns temporary names to intermediate query results to make complex expressions easier to understand <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300 ml-1">17</span> .
-                    </p>
-                    <p>
-                        • πF1,F2... (Generalized Projection): An enhanced version of projection that allows for arithmetic functions within the selection list <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300 ml-1">8</span> .
-                    </p>
-                    <p>
-                        • 𝓖 (Aggregate Functions): Performs mathematical calculations (like Sum, Avg, or Count) on a set of values to return a single result <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300 ml-1">18</span> <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-700 text-[10px] text-zinc-300">19</span> .
-                    </p>
-
-                    <div className="my-6 border-b border-dashed border-zinc-600"></div>
-
-                    <p>
-                        <strong>Analogy:</strong> Think of relational algebra symbols as <strong>tools in a specialized workshop</strong>. The <strong>Selection (σ)</strong> tool acts like a <span className="border-b border-zinc-500">sieve</span> that only lets through items of a certain size (rows), while the <strong>Projection (π)</strong> tool acts like a <span className="border-b border-zinc-500">mask</span> that only shows you specific parts (columns) of an object. The <strong>Join (⋈)</strong> symbols are like <strong>industrial glue</strong> that connects different parts together only where they perfectly fit.
-                    </p>
-
-                    <div className="flex items-center gap-3 mt-4">
-                        <button className="flex items-center gap-2 bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded text-xs font-medium hover:bg-zinc-700 transition-colors">
-                            <Copy className="w-3.5 h-3.5" /> Save to note
-                        </button>
-                        <button className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 transition-colors">
-                            <Copy className="w-4 h-4" />
-                        </button>
-                        <button className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 transition-colors">
-                            <ThumbsUp className="w-4 h-4" />
-                        </button>
-                        <button className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 transition-colors">
-                            <ThumbsDown className="w-4 h-4" />
-                        </button>
+            <div className="flex-1 overflow-y-auto w-full max-w-3xl mx-auto flex flex-col pt-8 pb-40 px-6 scroll-smooth">
+                {messages.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center mb-10 opacity-100 transition-opacity duration-700">
+                        <img
+                            src="/logo.png"
+                            alt="SAUL"
+                            className="w-48 md:w-56 mb-6 drop-shadow-2xl"
+                            style={{ filter: 'brightness(1.1)' }}
+                        />
+                        <h1 className="text-3xl md:text-4xl text-nblm-text-muted font-safari tracking-wide font-medium">
+                            Good Afternoon, {userName}
+                        </h1>
                     </div>
-                </div>
+                ) : (
+                    <div className="space-y-6 flex-1 w-full">
+                        {messages.map((msg) => (
+                            <div key={msg.id} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 text-[15px] leading-relaxed ${msg.role === 'user'
+                                    ? 'bg-[#2b2520] text-nblm-text border border-[#403c35]'
+                                    : 'bg-transparent text-nblm-text'
+                                    }`}>
+                                    {msg.content}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-nblm-panel via-nblm-panel to-transparent pt-10 pb-6 px-10">
+            {/* Input Area */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-nblm-panel via-nblm-panel to-transparent pt-12 pb-6 px-4 md:px-10 z-20">
                 <div className="max-w-3xl mx-auto">
-                    <p className="text-[11px] text-zinc-500 text-center mb-4">Today • 7:17 PM</p>
-                    <div className="relative bg-[#323236] rounded-2xl border border-nblm-border overflow-hidden focus-within:ring-1 focus-within:ring-nblm-border focus-within:border-nblm-border transition-all">
+                    {messages.length > 0 && <p className="text-[11px] text-zinc-500 text-center mb-4">Today • 7:17 PM</p>}
+                    <div className="relative bg-[#181511] rounded-2xl border border-nblm-border shadow-lg overflow-hidden focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
                         <textarea
                             placeholder="Start typing..."
-                            className="w-full bg-transparent text-white px-4 py-4 min-h-[56px] resize-none focus:outline-none text-[15px] placeholder-zinc-500"
+                            className="w-full bg-transparent text-nblm-text px-4 py-4 pr-14 min-h-[56px] resize-none focus:outline-none text-[15px] placeholder-zinc-600"
                             rows={1}
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
                         />
-                        <div className="absolute right-2 bottom-2 flex items-center gap-3">
-                            <div className="text-xs text-zinc-500 font-medium tracking-wide">4 sources</div>
-                            <button className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-zinc-200 transition-colors">
+                        <div className="absolute right-2 bottom-2 max-h-[40px] flex items-center gap-3">
+                            {messages.length === 0 && <div className="hidden sm:block text-xs text-zinc-500 font-medium tracking-wide">0 sources</div>}
+                            <button
+                                onClick={handleSendMessage}
+                                disabled={!inputValue.trim()}
+                                className="w-8 h-8 rounded-full bg-zinc-200 text-black flex items-center justify-center hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
                                 <ArrowUp className="w-5 h-5" />
                             </button>
                         </div>
                     </div>
-                    <p className="text-[10px] text-zinc-500 text-center mt-3">
-                        NotebookLM can be inaccurate; please double check its responses.
+                    <p className="text-[10px] text-zinc-600 text-center mt-3 font-medium">
+                        SAUL can be inaccurate; please double check its responses.
                     </p>
                 </div>
             </div>
