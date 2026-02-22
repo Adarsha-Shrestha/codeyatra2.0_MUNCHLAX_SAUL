@@ -220,32 +220,69 @@ export default function ChatArea({
             </div>
 
             <div className="flex-1 overflow-y-auto w-full max-w-3xl mx-auto flex flex-col pt-8 pb-40 px-6 scroll-smooth">
-                {messages.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center mb-10 opacity-100 transition-opacity duration-700">
-                        <img
-                            src="/logo.png"
-                            alt="SAUL"
-                            className="w-48 md:w-56 mb-6 drop-shadow-2xl"
-                            style={{ filter: 'brightness(1.1)' }}
-                        />
-                        <h1 className="text-3xl md:text-4xl text-nblm-text-muted font-safari tracking-wide font-medium">
-                            Good Afternoon, {userName}
-                        </h1>
-                    </div>
-                ) : (
-                    <div className="space-y-6 flex-1 w-full">
-                        {messages.map((msg) => (
-                            <div key={msg.id} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 text-[15px] leading-relaxed ${msg.role === 'user'
-                                    ? 'bg-[#2b2520] text-nblm-text border border-[#403c35]'
-                                    : 'bg-transparent text-nblm-text'
-                                    }`}>
-                                    {msg.content}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                <AnimatePresence mode="wait">
+                    {messages.length === 0 ? (
+                        <motion.div
+                            key="idle-view"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0, filter: 'blur(10px)', scale: 0.95 }}
+                            transition={{ duration: 0.5 }}
+                            className="flex-1 flex flex-col items-center justify-center mb-10"
+                        >
+                            <motion.img
+                                layoutId="saul-logo"
+                                src="/logo.png"
+                                alt="SAUL"
+                                className="w-48 md:w-56 mb-6 drop-shadow-2xl"
+                                style={{ filter: 'brightness(1.1)' }}
+                            />
+                            <BlurText
+                                text={`Good Afternoon, ${userName}`}
+                                delay={50}
+                                animateBy="words"
+                                direction="top"
+                                className="text-3xl md:text-4xl text-nblm-text-muted font-safari tracking-wide font-medium"
+                            />
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="chat-view"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="space-y-6 flex-1 w-full"
+                        >
+                            {messages.map((msg) => (
+                                <motion.div
+                                    key={msg.id}
+                                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 20 }}
+                                    className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                >
+                                    <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 text-[15px] leading-relaxed ${msg.role === 'user'
+                                        ? 'bg-[#2b2520] text-nblm-text border border-nblm-border'
+                                        : 'bg-transparent text-nblm-text'
+                                        }`}>
+                                        {msg.role === 'assistant' ? (
+                                            <SplitText
+                                                text={msg.content}
+                                                delay={20}
+                                                duration={0.1}
+                                                splitType="words, chars"
+                                                from={{ opacity: 0 }}
+                                                to={{ opacity: 1 }}
+                                                textAlign="left"
+                                            />
+                                        ) : (
+                                            msg.content
+                                        )}
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Input Area */}
@@ -262,7 +299,18 @@ export default function ChatArea({
                             onKeyDown={handleKeyDown}
                         />
                         <div className="absolute right-2 bottom-2 max-h-[40px] flex items-center gap-3">
-                            {messages.length === 0 && <div className="hidden sm:block text-xs text-zinc-500 font-medium tracking-wide">0 sources</div>}
+                            <AnimatePresence>
+                                {messages.length === 0 && (
+                                    <motion.div
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        className="hidden sm:block text-xs text-zinc-500 font-medium tracking-wide"
+                                    >
+                                        0 sources
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                             <button
                                 onClick={handleSendMessage}
                                 disabled={!inputValue.trim()}

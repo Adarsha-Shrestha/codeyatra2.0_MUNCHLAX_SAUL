@@ -1,6 +1,7 @@
 'use client';
 
 import { Menu, UserCircle, Plus } from 'lucide-react';
+import ShinyText from '../components/ShinyText';
 
 const MOCK_CLIENTS = [
   { id: '1', name: 'Rohan .S', img: 'https://i.pravatar.cc/150?u=1' },
@@ -35,8 +36,8 @@ export default function Home() {
             alt="SAUL Logo"
             className="w-40 md:w-52 mb-4 drop-shadow-2xl"
           />
-          <h1 className="text-2xl md:text-3xl font-safari text-nblm-text-muted tracking-wide">
-            Good Afternoon, {userName}
+          <h1 className="text-2xl md:text-3xl font-safari tracking-wide">
+            <ShinyText text={`Good Afternoon, ${userName}`} disabled={false} speed={3} className="text-nblm-text-muted" />
           </h1>
         </div>
 
@@ -47,7 +48,7 @@ export default function Home() {
           </h2>
 
           {/* Clients Container */}
-          <div className="w-full max-w-4xl bg-[#292621] rounded-3xl p-6 md:p-8 flex items-end gap-6 shadow-2xl border border-[#403c35]">
+          <div className="w-full max-w-4xl bg-[#292621] rounded-3xl p-6 md:p-8 flex items-end gap-6 shadow-2xl border border-nblm-border">
 
             {/* Scrollable list with fade-out mask */}
             <div className="flex-1 overflow-hidden relative" style={{ maskImage: 'linear-gradient(to right, black 85%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to right, black 85%, transparent 100%)' }}>
@@ -64,7 +65,7 @@ export default function Home() {
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <div className="bg-[#4a4742] py-3 px-2 text-center flex-shrink-0">
+                    <div className="bg-[#4a4742] py-3 px-2 text-center shrink-0">
                       <p className="font-safari text-nblm-text text-lg md:text-xl tracking-wide">{client.name}</p>
                     </div>
                   </div>
@@ -73,8 +74,8 @@ export default function Home() {
             </div>
 
             {/* Static Add Button at the end */}
-            <button className="shrink-0 w-36 h-48 md:w-44 md:h-56 bg-[#a69c92] hover:bg-[#b8afa6] text-[#403c35] rounded-2xl flex items-center justify-center transition-all hover:-translate-y-2 shadow-xl mb-6 ml-2 border-2 border-transparent hover:border-[#403c35]">
-              <Plus className="w-16 h-16 stroke-[1]" />
+            <button className="shrink-0 w-36 h-48 md:w-44 md:h-56 bg-[#a69c92] hover:bg-[#b8afa6] text-nblm-border rounded-2xl flex items-center justify-center transition-all hover:-translate-y-2 shadow-xl mb-6 ml-2 border-2 border-transparent hover:border-nblm-border">
+              <Plus className="w-16 h-16 stroke-1" />
             </button>
           </div>
         </div>
