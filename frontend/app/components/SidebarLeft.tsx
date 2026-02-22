@@ -98,16 +98,16 @@ export default function SidebarLeft({ onToggle, onSourceSelect }: SidebarLeftPro
                     <input
                         type="text"
                         placeholder="Search the web for new sources"
-                        className="w-full bg-[#181511] border border-nblm-border rounded-full py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-nblm-text-muted placeholder-zinc-500 text-nblm-text"
+                        className="w-full bg-[#13171a] border border-nblm-border rounded-full py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-nblm-text-muted placeholder-zinc-500 text-nblm-text"
                     />
                 </div>
             </div>
 
             <div className="px-4 pb-4 flex gap-2">
-                <button className="flex items-center gap-1.5 bg-[#2b2520] text-xs px-3 py-1 rounded-full border border-nblm-border hover:bg-nblm-border transition-colors text-nblm-text">
+                <button className="flex items-center gap-1.5 bg-[#252c31] text-xs px-3 py-1 rounded-full border border-nblm-border hover:bg-nblm-border transition-colors text-nblm-text">
                     <Search className="w-3 h-3 text-zinc-400" /> Web
                 </button>
-                <button className="flex justify-between items-center gap-1.5 bg-[#2b2520] text-xs px-3 py-1 rounded-full border border-nblm-border hover:bg-nblm-border transition-colors flex-1 text-nblm-text">
+                <button className="flex justify-between items-center gap-1.5 bg-[#252c31] text-xs px-3 py-1 rounded-full border border-nblm-border hover:bg-nblm-border transition-colors flex-1 text-nblm-text">
                     <span className="flex items-center gap-1.5"><Search className="w-3 h-3 text-zinc-400" /> Fast Research</span>
                     <ChevronRight className="w-3 h-3 text-zinc-400" />
                 </button>

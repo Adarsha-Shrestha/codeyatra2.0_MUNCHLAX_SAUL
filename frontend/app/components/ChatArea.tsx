@@ -151,7 +151,7 @@ export default function ChatArea({
                         </>
                     ) : isText ? (
                         <textarea
-                            className="w-full h-full bg-transparent border-0 rounded-xl p-6 text-nblm-text font-mono text-sm md:text-base resize-none focus:outline-none leading-relaxed max-w-5xl mx-auto"
+                            className="w-full h-full bg-transparent border-0 rounded-2xl p-6 text-nblm-text font-mono text-sm md:text-base resize-none focus:outline-none leading-relaxed max-w-5xl mx-auto"
                             value={textContent}
                             onChange={(e) => setTextContent(e.target.value)}
                             placeholder="Type to edit this document..."
@@ -219,7 +219,7 @@ export default function ChatArea({
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto w-full max-w-3xl mx-auto flex flex-col pt-8 pb-40 px-6 scroll-smooth">
+            <div className="flex-1 overflow-y-auto w-full max-w-3xl mx-auto flex flex-col pt-3 pb-40 px-6 scroll-smooth">
                 <AnimatePresence mode="wait">
                     {messages.length === 0 ? (
                         <motion.div
@@ -242,7 +242,7 @@ export default function ChatArea({
                                 delay={50}
                                 animateBy="words"
                                 direction="top"
-                                className="text-3xl md:text-4xl text-nblm-text-muted font-safari tracking-wide font-medium"
+                                className="text-3xl md:text-4xl text-nblm-text-muted tracking-wide font-medium"
                             />
                         </motion.div>
                     ) : (
@@ -261,7 +261,7 @@ export default function ChatArea({
                                     className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
                                     <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 text-[15px] leading-relaxed ${msg.role === 'user'
-                                        ? 'bg-[#2b2520] text-nblm-text border border-nblm-border'
+                                        ? 'bg-[#1c2125] text-nblm-text border border-nblm-border'
                                         : 'bg-transparent text-nblm-text'
                                         }`}>
                                         {msg.role === 'assistant' ? (
@@ -289,7 +289,7 @@ export default function ChatArea({
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-nblm-panel via-nblm-panel to-transparent pt-12 pb-6 px-4 md:px-10 z-20">
                 <div className="max-w-3xl mx-auto">
                     {messages.length > 0 && <p className="text-[11px] text-zinc-500 text-center mb-4">Today • 7:17 PM</p>}
-                    <div className="relative bg-[#181511] rounded-2xl border border-nblm-border shadow-lg overflow-hidden focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
+                    <div className="relative bg-[#1c2125] rounded-3xl border border-nblm-border shadow-lg overflow-hidden focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
                         <textarea
                             placeholder="Start typing..."
                             className="w-full bg-transparent text-nblm-text px-4 py-4 pr-14 min-h-[56px] resize-none focus:outline-none text-[15px] placeholder-zinc-600"
@@ -298,19 +298,8 @@ export default function ChatArea({
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
                         />
-                        <div className="absolute right-2 bottom-2 max-h-[40px] flex items-center gap-3">
-                            <AnimatePresence>
-                                {messages.length === 0 && (
-                                    <motion.div
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        className="hidden sm:block text-xs text-zinc-500 font-medium tracking-wide"
-                                    >
-                                        0 sources
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                        <div className="absolute right-2 bottom-2 max-h-[30px] flex items-center gap-3">
+                       
                             <button
                                 onClick={handleSendMessage}
                                 disabled={!inputValue.trim()}
@@ -321,7 +310,7 @@ export default function ChatArea({
                         </div>
                     </div>
                     <p className="text-[10px] text-zinc-600 text-center mt-3 font-medium">
-                        SAUL can be inaccurate; please double check its responses.
+                        Saul can be inaccurate: please double check its responses.
                     </p>
                 </div>
             </div>

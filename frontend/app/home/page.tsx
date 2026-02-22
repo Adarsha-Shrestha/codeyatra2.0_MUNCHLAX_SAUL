@@ -48,7 +48,7 @@ export default function Home() {
           </h2>
 
           {/* Clients Container */}
-          <div className="w-full max-w-4xl bg-[#292621] rounded-3xl p-6 md:p-8 flex items-end gap-6 shadow-2xl border border-nblm-border">
+          <div className="w-full max-w-4xl bg-[#252c31] rounded-3xl p-6 md:p-8 flex items-end gap-6 shadow-2xl border border-nblm-border">
 
             {/* Scrollable list with fade-out mask */}
             <div className="flex-1 overflow-hidden relative" style={{ maskImage: 'linear-gradient(to right, black 85%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to right, black 85%, transparent 100%)' }}>
@@ -65,8 +65,8 @@ export default function Home() {
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <div className="bg-[#4a4742] py-3 px-2 text-center shrink-0">
-                      <p className="font-safari text-nblm-text text-lg md:text-xl tracking-wide">{client.name}</p>
+                    <div className="bg-[#1c2125] py-3 px-2 text-center shrink-0">
+                      <p className="font-safari text-lg md:text-xl tracking-wide">{client.name}</p>
                     </div>
                   </div>
                 ))}

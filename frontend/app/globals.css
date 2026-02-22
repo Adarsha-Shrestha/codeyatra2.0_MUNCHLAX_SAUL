@@ -1,13 +1,12 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 
 @theme {
-  --color-nblm-bg: #1f1b16;
-  --color-nblm-panel: #030301;
-  --color-nblm-border: #403c35;
-  --color-nblm-text: #887d73;
-  --color-nblm-text-muted: #675e53;
-  --color-nblm-accent: #887d73;
+  --color-nblm-bg: #1c2125;
+  --color-nblm-panel: #252c31;
+  --color-nblm-border: #2f383e;
+  --color-nblm-text: #82878b;
+  --color-nblm-text-muted: #585f64;
+  --color-nblm-accent: #82878b;
 }
 
 :root {
@@ -18,7 +17,6 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   overflow: hidden;
 }
 
@@ -41,6 +39,3 @@ body {
   background: #675e53;
 }
 
-.font-safari {
-  font-family: "Faraz Modern", "Playfair Display", serif;
-}
