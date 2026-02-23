@@ -1,39 +1,67 @@
 import os
-import chromadb
-from chromadb.config import Settings
-from config.settings import settings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from config.postgres import engine, SessionLocal, Base, TargetDB, IngestionStatus
+from sqlalchemy import create_engine
+from config.postgres import init_db
+
+class Settings(BaseSettings):
+    # App Settings
+    APP_NAME: str = "Legal Intelligence System"
+    DEBUG: bool = True
+
+    # Ollama Settings
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    EMBEDDING_MODEL: str = "mxbai-embed-large:latest"
+    GENERATION_MODEL: str = "deepseek-r1:7b-qwen-distill-q4_K_M"
+    JUDGE_MODEL: str = "deepseek-r1:7b-qwen-distill-q4_K_M"
+
+    # ChromaDB Settings
+    CHROMA_PERSIST_DIR: str = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "data", "chroma"
+    )
+
+    # ChromaDB Collections
+    LAW_DB_NAME: str = "law_reference_db"
+    CASES_DB_NAME: str = "case_history_db"
+    CLIENT_DB_NAME: str = "client_cases_db"
+
+    # PostgreSQL Settings
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "lol@"
+    POSTGRES_DB: str = "legal_rag"
+
+    @property
+    def POSTGRES_URL(self) -> str:
+        return (
+            f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
+    @property
+    def POSTGRES_ASYNC_URL(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
+    # File storage – where uploaded files are persisted on disk
+    FILE_STORAGE_DIR: str = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "data", "docs"
+    )
+
+    # Generation settings
+    MAX_RETRIES: int = 3
+    SIMILARITY_THRESHOLD: float = 0.75
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+
+settings = Settings()
 
 class DatabaseClient:
     def __init__(self):
-        # Ensure the persistent directory exists
-        os.makedirs(settings.CHROMA_PERSIST_DIR, exist_ok=True)
-        
-        self.client = chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIR)
-        
-        # Initialize collections
-        self.law_db = self.client.get_or_create_collection(
-            name=settings.LAW_DB_NAME,
-            metadata={"description": "Law & Reference Database"}
-        )
-        
-        self.cases_db = self.client.get_or_create_collection(
-            name=settings.CASES_DB_NAME,
-            metadata={"description": "Past Cases & Case History Database"}
-        )
-        
-        self.client_db = self.client.get_or_create_collection(
-            name=settings.CLIENT_DB_NAME,
-            metadata={"description": "Individual Client Cases Database"}
-        )
+        init_db()
 
-    def get_law_db(self):
-        return self.law_db
-        
-    def get_cases_db(self):
-        return self.cases_db
-        
-    def get_client_db(self):
-        return self.client_db
-
-# Singleton instance
 db_client = DatabaseClient()
