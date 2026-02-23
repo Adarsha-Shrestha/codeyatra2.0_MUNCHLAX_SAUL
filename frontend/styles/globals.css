@@ -15,11 +15,24 @@
   --foreground: #887d73;
 }
 
+/* ─── Light mode overrides ────────────────────────────────────────────────── */
+html.light {
+  --color-nblm-bg: #f2f0eb;
+  --color-nblm-panel: #e8e5df;
+  --color-nblm-border: #ccc9c0;
+  --color-nblm-text: #3c3c38;
+  --color-nblm-text-muted: #7a7870;
+  --color-nblm-accent: #3c3c38;
+  --background: #f2f0eb;
+  --foreground: #3c3c38;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
   overflow: hidden;
 }
+
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
@@ -38,4 +51,12 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #675e53;
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background: #c0bdb6;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #a8a49c;
 }

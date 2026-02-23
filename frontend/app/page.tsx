@@ -1,23 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Header from '@/components/layout/Header';
 import SidebarLeft from '@/components/layout/SidebarLeft';
 import ChatArea from '@/components/layout/ChatArea';
 import SidebarRight from '@/components/layout/SidebarRight';
 import { useSidebarResize } from '@/hooks/useSidebarResize';
 import { SAMPLE_MARKDOWN } from '@/lib/constants';
-import type { SourceInfo } from '@/types';
+import { saveSession, upsertSession } from '@/lib/chatHistory';
+import type { SourceInfo, Message, ChatSession } from '@/types';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'sources' | 'chat' | 'toc'>('chat');
   const [activeSource, setActiveSource] = useState<string | SourceInfo | null>(null);
+  const [sessionKey, setSessionKey] = useState('initial');
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [initialMessages, setInitialMessages] = useState<Message[] | undefined>(undefined);
   const { containerRef, leftOpen, rightOpen, leftWidth, rightWidth, handleToggleLeft, handleToggleRight, handleLeftResizeStart, handleRightResizeStart } = useSidebarResize();
 
   const handleSourceClick = (heading: string) => {
     setActiveSource(heading);
     setActiveTab('chat');
   };
+
+  const handleSaveChat = useCallback((messages: Message[]) => {
+    const saved = upsertSession(activeSessionId, messages);
+    setActiveSessionId(saved.id);
+  }, [activeSessionId]);
+
+  const handleLoadSession = useCallback((session: ChatSession) => {
+    setInitialMessages(session.messages);
+    setSessionKey(session.id);
+    setActiveSessionId(session.id);
+    setActiveTab('chat');
+  }, []);
 
   return (
     <div className="flex flex-col h-screen w-full bg-nblm-bg text-nblm-text overflow-hidden font-sans">
@@ -51,7 +67,7 @@ export default function Home() {
           `}
           style={leftOpen ? { width: leftWidth } : undefined}
         >
-          <SidebarLeft onToggle={handleToggleLeft} onSourceSelect={setActiveSource} />
+          <SidebarLeft onToggle={handleToggleLeft} onSourceSelect={setActiveSource} onLoadSession={handleLoadSession} />
         </div>
 
         {/* LEFT DRAG HANDLE */}
@@ -67,7 +83,7 @@ export default function Home() {
 
         {/* Mobile: only one panel visible at a time */}
         <div className={`${activeTab === 'sources' ? 'flex' : 'hidden'} md:hidden flex-1 flex-col h-full bg-nblm-bg`}>
-          <SidebarLeft onToggle={() => setActiveTab('chat')} onSourceSelect={setActiveSource} />
+          <SidebarLeft onToggle={() => setActiveTab('chat')} onSourceSelect={setActiveSource} onLoadSession={handleLoadSession} />
         </div>
 
         {/* CHAT AREA */}
@@ -80,8 +96,13 @@ export default function Home() {
           min-w-0
         `}>
           <ChatArea
+            key={sessionKey}
             activeSource={activeSource}
             onClearSource={() => setActiveSource(null)}
+            onSourceSelect={setActiveSource}
+            onSaveChat={handleSaveChat}
+            sessionKey={sessionKey}
+            initialMessages={initialMessages}
             leftOpen={leftOpen}
             rightOpen={rightOpen}
             onToggleLeft={handleToggleLeft}

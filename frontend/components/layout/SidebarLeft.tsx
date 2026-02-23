@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, Check, FileText, ChevronRight, LayoutPanelLeft, FileType, Image as ImageIcon } from 'lucide-react';
-import type { SourceInfo, SidebarLeftProps } from '@/types';
+import { Plus, Search, Check, FileText, ChevronRight, LayoutPanelLeft, FileType, Image as ImageIcon, History } from 'lucide-react';
+import type { SourceInfo, SidebarLeftProps, ChatSession } from '@/types';
 import AddSourceModal from '@/components/layout/AddSourceModal';
+import ChatHistoryPanel from '@/components/layout/ChatHistoryPanel';
 
-export default function SidebarLeft({ onToggle, onSourceSelect }: SidebarLeftProps) {
+export default function SidebarLeft({ onToggle, onSourceSelect, onLoadSession }: SidebarLeftProps) {
+  const [tab, setTab] = useState<'sources' | 'history'>('sources');
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [sources, setSources] = useState<SourceInfo[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -56,12 +59,45 @@ export default function SidebarLeft({ onToggle, onSourceSelect }: SidebarLeftPro
   return (
     <aside className="w-full bg-nblm-bg flex flex-col h-full shrink-0">
       {/* Header */}
-      <div className="p-4 flex items-center justify-between">
-        <h2 className="text-[16px] font-semibold text-zinc-400 tracking-wide">Sources</h2>
+      <div className="p-4 flex items-center justify-between shrink-0">
+        {/* Tab switcher */}
+        <div className="flex items-center gap-0.5 bg-nblm-panel rounded-full p-0.5 border border-nblm-border">
+          <button
+            onClick={() => setTab('sources')}
+            className={`px-3 py-1 rounded-full text-[12px] font-semibold transition-all ${
+              tab === 'sources' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            Sources
+          </button>
+          <button
+            onClick={() => { setTab('history'); setHistoryRefreshKey(k => k + 1); }}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold transition-all ${
+              tab === 'history' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <History className="w-3 h-3" />
+            History
+          </button>
+        </div>
         <button onClick={onToggle} title="Collapse sidebar" className="text-zinc-400 hover:text-white transition-colors">
           <LayoutPanelLeft className="w-5 h-5" />
         </button>
       </div>
+
+      {/* History tab */}
+      {tab === 'history' && (
+        <ChatHistoryPanel
+          refreshKey={historyRefreshKey}
+          onSelectSession={(session) => {
+            onLoadSession(session);
+          }}
+        />
+      )}
+
+      {/* Sources tab */}
+      {tab === 'sources' && (
+        <>
 
       {/* Add Sources Button */}
       <div className="px-4 pb-4">
@@ -148,6 +184,9 @@ export default function SidebarLeft({ onToggle, onSourceSelect }: SidebarLeftPro
           </ul>
         )}
       </div>
+
+      </>)}
+
 
       <AddSourceModal
         isOpen={isAddModalOpen}

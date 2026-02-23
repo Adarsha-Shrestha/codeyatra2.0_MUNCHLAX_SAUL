@@ -2,6 +2,7 @@
 
 import { Menu, UserCircle, Plus } from 'lucide-react';
 import ShinyText from '@/components/ui/ShinyText';
+import { useTheme } from '@/hooks/useTheme';
 
 const MOCK_CLIENTS = [
   { id: '1', name: 'Rohan .S', img: 'https://i.pravatar.cc/150?u=1' },
@@ -14,6 +15,8 @@ const MOCK_CLIENTS = [
 
 export default function Home() {
   const userName = "Rohan";
+  const { theme } = useTheme();
+  const logoSrc = theme === 'light' ? '/logo_light.png' : '/logo.png';
 
   return (
     <main className="min-h-screen w-full bg-nblm-bg flex flex-col items-center relative overflow-hidden font-sans">
@@ -32,7 +35,7 @@ export default function Home() {
         {/* Logo & Greeting */}
         <div className="flex flex-col items-center mb-16">
           <img
-            src="/logo.png"
+            src={logoSrc}
             alt="SAUL Logo"
             className="w-40 md:w-52 mb-4 drop-shadow-2xl"
           />

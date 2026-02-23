@@ -90,7 +90,7 @@ function SuggestionsSection({ metrics }: { metrics: AIResponse['evaluation_metri
       className="mt-6"
     >
       <p className="text-[13px] font-semibold text-nblm-text mb-2">Suggestions</p>
-      <p className="text-[13px] leading-relaxed text-nblm-text-muted/80">{text}</p>
+      <p className="text-[15px] leading-relaxed text-nblm-text">{text}</p>
     </motion.div>
   );
 }
@@ -125,11 +125,11 @@ function SourcesList({
               onClick={() => onSourceClick?.(src)}
               className="flex items-start gap-2 text-left group w-full"
             >
-              <ArrowUpRight className="w-3.5 h-3.5 text-nblm-text-muted/60 group-hover:text-zinc-400 shrink-0 mt-0.5 transition-colors" />
-              <span className="text-[13px] text-nblm-text-muted/80 group-hover:text-nblm-text transition-colors leading-snug">
+              <ArrowUpRight className="w-4 h-4 text-nblm-text shrink-0 mt-0.5" />
+              <span className="text-[15px] text-nblm-text font-medium leading-snug">
                 {src.id}. {src.title}
                 {src.date !== 'Unknown' && (
-                  <span className="text-nblm-text-muted/50"> · {src.date}</span>
+                  <span className="text-nblm-text-muted"> · {src.date}</span>
                 )}
               </span>
             </button>

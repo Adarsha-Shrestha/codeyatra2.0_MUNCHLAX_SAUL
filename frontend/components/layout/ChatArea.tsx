@@ -1,30 +1,61 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Settings2, MoreVertical, ArrowUp, X,
-  PanelLeft, PanelRight, Link as LinkIcon
+  PanelLeft, PanelRight, Link as LinkIcon,
+  Save, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BlurText from '@/components/ui/BlurText';
 import type { ChatAreaProps, SourceInfo, Message, ModelId, AIResponse, AISource } from '@/types';
+import { useTheme } from '@/hooks/useTheme';
 import ModelSelector from '@/components/layout/ModelSelector';
 import AssistantMessage from '@/components/layout/AssistantMessage';
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 export default function ChatArea({
   activeSource,
   onClearSource,
+  onSourceSelect,
+  onSaveChat,
+  sessionKey,
+  initialMessages,
   leftOpen,
   rightOpen,
   onToggleLeft,
   onToggleRight,
   userName = 'Rohan'
 }: ChatAreaProps) {
+  const { theme } = useTheme();
+  const logoSrc = theme === 'light' ? '/logo_light.png' : '/logo.png';
   const [textContent, setTextContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(initialMessages ?? []);
   const [inputValue, setInputValue] = useState('');
   const [selectedModel, setSelectedModel] = useState<ModelId>('briefing');
+
+  // Reset messages when a session is loaded
+  useEffect(() => {
+    setMessages(initialMessages ?? []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionKey]);
+
+  // Autosave — debounced 2s after messages change
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (messages.length === 0) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      onSaveChat?.(messages);
+    }, 2000);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  }, [messages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (typeof activeSource !== 'string' && activeSource?.fileType.includes('text')) {
@@ -214,7 +245,7 @@ export default function ChatArea({
             <div className="flex items-center gap-3 overflow-hidden text-zinc-400">
               <motion.img
                 layoutId="saul-logo"
-                src="/logo.png"
+                src={logoSrc}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.4 }}
@@ -227,7 +258,29 @@ export default function ChatArea({
 
         <div className="flex gap-2 text-zinc-400 items-center">
           <ModelSelector value={selectedModel} onValueChange={setSelectedModel} />
-          <button className="hover:text-nblm-text transition-colors p-1"><MoreVertical className="w-5 h-5" /></button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="hover:text-nblm-text transition-colors p-1">
+                <MoreVertical className="w-5 h-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  if (messages.length > 0) onSaveChat?.(messages);
+                }}
+                disabled={messages.length === 0}
+              >
+                <Save className="w-4 h-4" />
+                Save chat
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-amber-400 focus:text-amber-300">
+                <Sparkles className="w-4 h-4" />
+                Try Premium
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button
             onClick={onToggleRight}
             title={rightOpen ? 'Collapse contents' : 'Expand contents'}
@@ -252,7 +305,7 @@ export default function ChatArea({
             >
               <motion.img
                 layoutId="saul-logo"
-                src="/logo.png"
+                src={logoSrc}
                 alt="SAUL"
                 className="w-48 md:w-56 mb-6 drop-shadow-2xl"
                 style={{ filter: 'brightness(1.1)' }}
@@ -291,9 +344,17 @@ export default function ChatArea({
                       <AssistantMessage
                         response={msg.aiResponse}
                         model={selectedModel}
-                        onSourceClick={(src: AISource) => {
-                          // TODO: open source document by src.id / src.title
-                          console.log('Open source:', src);
+                        onSourceClick={async (src: AISource) => {
+                          try {
+                            const res = await fetch('/api/sources');
+                            const list: SourceInfo[] = await res.json();
+                            const match = list.find(
+                              (s) => s.title.toLowerCase() === src.title.toLowerCase()
+                            );
+                            if (match) onSourceSelect?.(match);
+                          } catch (e) {
+                            console.error('Could not open source:', e);
+                          }
                         }}
                       />
                     ) : msg.role === 'assistant' ? (

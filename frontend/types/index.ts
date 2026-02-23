@@ -79,11 +79,25 @@ export interface Client {
   img: string;
 }
 
+// ─── Chat History ─────────────────────────────────────────────────────────────
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: Message[];
+}
+
 // ─── Component Prop Types ─────────────────────────────────────────────────────
 
 export interface ChatAreaProps {
   activeSource?: string | SourceInfo | null;
   onClearSource?: () => void;
+  onSourceSelect?: (source: SourceInfo) => void;
+  onSaveChat?: (messages: Message[]) => void;
+  sessionKey?: string;
+  initialMessages?: Message[];
   leftOpen?: boolean;
   rightOpen?: boolean;
   onToggleLeft?: () => void;
@@ -94,6 +108,7 @@ export interface ChatAreaProps {
 export interface SidebarLeftProps {
   onToggle: () => void;
   onSourceSelect: (source: SourceInfo) => void;
+  onLoadSession: (session: ChatSession) => void;
 }
 
 export interface SidebarRightProps {
