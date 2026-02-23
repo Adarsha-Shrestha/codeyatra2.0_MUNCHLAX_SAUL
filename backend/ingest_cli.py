@@ -284,6 +284,112 @@ def ingest_file(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# PUBLIC — ingestion for CaseFile (new case_file_table)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def ingest_case_file(
+    file_id: int,
+    filename: str,
+    file_bytes: bytes,
+    case_id: int,
+    db_session,
+) -> dict:
+    """
+    Ingest a case file from the new case_file_table into ChromaDB.
+    
+    This is called by the /upload-file endpoint when file_type='case_file'.
+    The file is already stored in the database, this function only handles
+    the parsing, chunking, and embedding into ChromaDB.
+    
+    Parameters
+    ──────────
+        file_id    : ID of the CaseFile record
+        filename   : Original filename
+        file_bytes : Raw file content
+        case_id    : ID of the parent Case
+        db_session : Active SQLAlchemy session
+    
+    Returns
+    ───────
+        {
+            "success": bool,
+            "chunks":  int,
+            "error":   str | None,
+        }
+    """
+    from config.postgres import CaseFile, IngestionStatus
+    
+    try:
+        # Get the CaseFile record
+        case_file = db_session.query(CaseFile).filter(CaseFile.file_id == file_id).first()
+        if not case_file:
+            return {"success": False, "chunks": 0, "error": f"CaseFile {file_id} not found"}
+        
+        # Update status to processing
+        case_file.status = IngestionStatus.processing
+        db_session.commit()
+        
+        # Save to temporary file for parsing
+        ext = os.path.splitext(filename)[1].lower()
+        temp_path = os.path.join(settings.FILE_STORAGE_DIR, f"temp_{file_id}{ext}")
+        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+        
+        with open(temp_path, "wb") as f:
+            f.write(file_bytes)
+        
+        try:
+            # ── Parse text ────────────────────────────────────────────────────
+            text = DocumentParser.parse_file(temp_path)
+            if not text.strip():
+                raise ValueError("Extracted text is empty after parsing.")
+            
+            # ── LLM metadata extraction ───────────────────────────────────────
+            extracted_meta = MetadataExtractor.extract_with_llm(text, settings.JUDGE_MODEL)
+            manual_meta: dict = {
+                "source_file": filename,
+                "case_file_id": file_id,
+                "case_id": case_id,
+            }
+            final_meta = MetadataExtractor.merge_metadata(extracted_meta, manual_meta)
+            
+            # ── Chunk ─────────────────────────────────────────────────────────
+            target_db_name = settings.CLIENT_DB_NAME
+            chunks = SectionAwareChunker.chunk_document(text, doc_type=target_db_name)
+            print(f"  Created {len(chunks)} chunks for case_file_id={file_id}")
+            
+            # ── Embed & store → ChromaDB ──────────────────────────────────────
+            DocumentEmbedder.embed_and_store(chunks, target_db_name, final_meta)
+            
+            # ── Mark SUCCESS ──────────────────────────────────────────────────
+            case_file.status = IngestionStatus.success
+            case_file.chunk_count = len(chunks)
+            case_file.ingested_at = datetime.datetime.utcnow()
+            db_session.commit()
+            
+            return {
+                "success": True,
+                "chunks": len(chunks),
+                "error": None,
+            }
+        
+        finally:
+            # Cleanup temp file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+    
+    except Exception as exc:
+        db_session.rollback()
+        try:
+            if "case_file" in locals() and case_file:
+                case_file.status = IngestionStatus.failed
+                case_file.error_message = str(exc)[:1024]
+                db_session.commit()
+        except Exception:
+            db_session.rollback()
+        return {"success": False, "chunks": 0, "error": str(exc)}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # CLI entry point
 # ──────────────────────────────────────────────────────────────────────────────
 
