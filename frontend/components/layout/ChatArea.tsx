@@ -7,9 +7,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BlurText from '@/components/ui/BlurText';
-import SplitText from '@/components/ui/SplitText';
-import type { ChatAreaProps, SourceInfo, Message } from '@/types';
+import type { ChatAreaProps, SourceInfo, Message, ModelId, AIResponse, AISource } from '@/types';
 import ModelSelector from '@/components/layout/ModelSelector';
+import AssistantMessage from '@/components/layout/AssistantMessage';
 
 export default function ChatArea({
   activeSource,
@@ -24,6 +24,7 @@ export default function ChatArea({
   const [isSaving, setIsSaving] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
+  const [selectedModel, setSelectedModel] = useState<ModelId>('briefing');
 
   useEffect(() => {
     if (typeof activeSource !== 'string' && activeSource?.fileType.includes('text')) {
@@ -59,14 +60,38 @@ export default function ChatArea({
     setMessages(prev => [...prev, newMsg]);
     setInputValue('');
 
+    // TODO: replace with real API call — mock demo response
     setTimeout(() => {
+      const mockResponse: AIResponse = {
+        answer:
+          "Case 001 pertains to the theft of Sita Sharma's red mountain bike. On April 9th, at approximately 2:30 PM, Sita parked her bike outside a grocery store in Patan Durbar Square. Upon returning around 15 minutes later, she found her bike missing. A local shopkeeper reported seeing Raju Karki near the bike as he ridden it away.\n\nIn an affidavit from Gopal Shrestha, another witness at the scene, Raju Karki was observed near a parked red mountain bike on the same day. Shrestha described witnessing Raju unlock or break the lock and ride away. He also mentioned knowing Raju from the neighborhood and recognizing him clearly.\n\nBoth the FIRs (Sources 4 and 5) corroborate these accounts, suggesting that the theft involved Raju Karki. Therefore, Case 001 likely involves this incident of theft by Raju Karki, supported by evidence from multiple witnesses. [SOURCE 4], [SOURCE 5].",
+        sources: [
+          { id: 1, title: 'Affidavit.txt', date: 'Unknown', type: 'Document' },
+          { id: 2, title: 'Affidavit.txt', date: 'Unknown', type: 'Document' },
+          { id: 3, title: 'Affidavit', date: 'Unknown', type: 'client_case' },
+          { id: 4, title: 'FIR.txt', date: 'Unknown', type: 'Document' },
+          { id: 5, title: 'First Information Report (FIR)', date: '2024-04-10', type: 'Document' },
+        ],
+        confidence: 'High',
+        evaluation_metrics: {
+          score: 7,
+          is_helpful: true,
+          is_grounded: true,
+          hallucination_detected: false,
+          reason:
+            'The answer correctly summarizes the case but contains minor inaccuracies. The event was actually filed on April 10th, not April 9th.',
+          suggestion:
+            'Correct the date from April 9th to April 10th and fix the grammar in the request statement.',
+        },
+      };
       setMessages(prev => [
         ...prev,
         {
           id: Date.now().toString(),
           role: 'assistant',
-          content: "I am SAUL. I'm currently in development, but I'll soon be able to assist you with the sources you've uploaded!"
-        }
+          content: mockResponse.answer,
+          aiResponse: mockResponse,
+        },
       ]);
     }, 1000);
   };
@@ -201,7 +226,7 @@ export default function ChatArea({
         </div>
 
         <div className="flex gap-2 text-zinc-400 items-center">
-          <ModelSelector />
+          <ModelSelector value={selectedModel} onValueChange={setSelectedModel} />
           <button className="hover:text-nblm-text transition-colors p-1"><MoreVertical className="w-5 h-5" /></button>
           <button
             onClick={onToggleRight}
@@ -259,19 +284,20 @@ export default function ChatArea({
                     className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 text-[15px] leading-relaxed ${
                       msg.role === 'user'
                         ? 'bg-nblm-bg text-nblm-text border border-nblm-border'
-                        : 'bg-transparent text-nblm-text'
+                        : 'bg-transparent text-nblm-text w-full max-w-full'
                     }`}
                   >
-                    {msg.role === 'assistant' ? (
-                      <SplitText
-                        text={msg.content}
-                        delay={20}
-                        duration={0.1}
-                        splitType="words, chars"
-                        from={{ opacity: 0 }}
-                        to={{ opacity: 1 }}
-                        textAlign="left"
+                    {msg.role === 'assistant' && msg.aiResponse ? (
+                      <AssistantMessage
+                        response={msg.aiResponse}
+                        model={selectedModel}
+                        onSourceClick={(src: AISource) => {
+                          // TODO: open source document by src.id / src.title
+                          console.log('Open source:', src);
+                        }}
                       />
+                    ) : msg.role === 'assistant' ? (
+                      <p className="text-[15px] leading-relaxed">{msg.content}</p>
                     ) : (
                       msg.content
                     )}

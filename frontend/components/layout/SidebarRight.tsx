@@ -1,9 +1,18 @@
 'use client';
 
 import { AlignLeft, PanelRight } from 'lucide-react';
-import type { SidebarRightProps } from '@/types';
+import type { SidebarRightProps, ChecklistAnalytic } from '@/types';
+import TodoBlock from '@/components/layout/TodoBlock';
 
-export default function SidebarRight({ markdownContent, onSourceClick, onToggle }: SidebarRightProps) {
+const DEMO_CHECKLIST: ChecklistAnalytic = {
+  analytic_type: 'checklist',
+  client_case_id: '001',
+  report: `### Strategic To-Do List for Client Case\n\n#### Current Status of the Client's Case:\nThe client case involves a criminal trespassing and vandalism incident reported by Ram Bahadur to the Kathmandu Central Police Station on 2024-03-12. A witness, Shyam Thapa, provided an affidavit supporting the FIR.\n\n---\n\n### Mandatory Procedural Checklist\n\n1. *Follow Up on FIR (Date: 2024-03-12)*  \n   - Action: Confirm receipt and status of the First Information Report filed by Ram Bahadur at Kathmandu Central Police Station.\n   - Deadline: Follow-up within a reasonable period to ensure proper handling.\n   - Citation: [FIR.txt (2024-03-12)]\n\n2. *Prepare and Serve Legal Documents*  \n   - Action: Draft and serve the complaint ( FIR document) to Hari Prasad Koirala as required by law.\n   - Deadline: Typically within 15 days from service, unless extended by court order.\n   - Citation: [FIR.txt (Unknown Date)]\n\n3. *Obtain Copy of Affidavit*  \n   - Action: Ensure a copy of Shyam Thapa's affidavit is available for production to the defendant or during court proceedings.\n   - Deadline: Immediate availability upon request from the legal team.\n   - Citation: [Affidavit.txt (2024-03-15)]\n\n4. *Review and Confirm Witness Statements*  \n   - Action: Verify the accuracy of Shyam Thapa's statements to ensure they align with the FIR details.\n   - Deadline: Within 7 days of receiving the affidavit.\n   - Citation: [Affidavit.txt (2024-03-15)]\n\n5. *Schedule Court Proceedings*  \n   - Action: Arrange a court appearance date based on the case timeline and requirements under applicable law.\n   - Deadline: Typically within weeks after service of legal documents, depending on the case type.\n   - Citation: [FIR.txt (2024-03-12)]\n\n---\n\n### Output Format:\n\n markdown\n# Strategic To-Do List for Client Case\n\n## Current Status:\nThe client case involves a criminal trespassing and vandalism incident reported by Ram Bahadur to the Kathmandu Central Police Station on 2024-03-12. A witness, Shyam Thapa, provided an affidavit supporting the FIR.\n\n---\n\n## Mandatory Procedural Checklist\n\n### 1. Follow Up on FIR (Date: 2024-03-12)  \n   - Action: Confirm receipt and status of the First Information Report filed by Ram Bahadur at Kathmandu Central Police Station.\n   - Deadline: Follow-up within a reasonable period to ensure proper handling.\n   - Citation: [FIR.txt (2024-03-12)]\n\n### 2. Prepare and Serve Legal Documents  \n   - Action: Draft and serve the complaint (FIR document) to Hari Prasad Koirala as required by law.\n   - Deadline: Typically within 15 days from service, unless extended by court order.\n   - Citation: [FIR.txt (Unknown Date)]\n\n### 3. Obtain Copy of Affidavit  \n   - Action: Ensure a copy of Shyam Thapa's affidavit is available for production to the defendant or during court proceedings.\n   - Deadline: Immediate availability upon request from the legal team.\n   - Citation: [Affidavit.txt (2024-03-15)]\n\n### 4. Review and Confirm Witness Statements  \n   - Action: Verify the accuracy of Shyam Thapa's statements to ensure they align with the FIR details.\n   - Deadline: Within 7 days of receiving the affidavit.\n   - Citation: [Affidavit.txt (2024-03-15)]\n\n### 5. Schedule Court Proceedings  \n   - Action: Arrange a court appearance date based on the case timeline and requirements under applicable law.\n   - Deadline: Typically within weeks after service of legal documents, depending on the case type.\n   - Citation: [FIR.txt (2024-03-12)]\n`,
+  sources: [],
+};
+
+export default function SidebarRight({ markdownContent, onSourceClick, onToggle, checklistData }: SidebarRightProps) {
+  const todoData = checklistData ?? DEMO_CHECKLIST;
   const headings = markdownContent
     .split('\n')
     .filter(line => line.startsWith('#'))
@@ -52,6 +61,9 @@ export default function SidebarRight({ markdownContent, onSourceClick, onToggle 
           ))
         )}
       </div>
+
+      {/* ── Todo Block ─────────────────────── */}
+      <TodoBlock data={todoData} />
     </aside>
   );
 }

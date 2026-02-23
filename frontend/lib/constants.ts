@@ -1,7 +1,9 @@
 // ─── Layout Constants ─────────────────────────────────────────────────────────
 
 export const SIDEBAR_WIDTH = 320;
-export const CHAT_MIN_WIDTH = 480;
+export const SIDEBAR_MIN_WIDTH = 200;
+export const SIDEBAR_MAX_WIDTH = 520;
+export const CHAT_MIN_WIDTH = 420;
 
 // ─── Sample Markdown Content ──────────────────────────────────────────────────
 

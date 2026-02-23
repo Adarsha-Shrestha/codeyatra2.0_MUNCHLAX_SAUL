@@ -154,6 +154,7 @@ export default function SidebarLeft({ onToggle, onSourceSelect }: SidebarLeftPro
         onClose={() => setIsAddModalOpen(false)}
         onSourceAdded={handleSourceAdded}
       />
+
     </aside>
   );
 }

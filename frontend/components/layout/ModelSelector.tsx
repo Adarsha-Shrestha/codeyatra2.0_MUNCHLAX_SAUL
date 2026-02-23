@@ -5,30 +5,36 @@ import { Settings2, Check } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cn } from "@/lib/utils"
+import type { ModelId } from "@/types"
 
 const MODELS = [
   {
-    id: "briefing",
+    id: "briefing" as ModelId,
     label: "Briefing",
     description: "Quick, concise answers for fast lookups",
   },
   {
-    id: "evidence-based",
+    id: "evidence-based" as ModelId,
     label: "Evidence Based",
     description: "Responses grounded in cited sources",
   },
   {
-    id: "heavy-duty",
+    id: "heavy-duty" as ModelId,
     label: "Heavy Duty",
     description: "Deep, comprehensive multi-step analysis",
   },
-] as const
+]
 
-type ModelId = (typeof MODELS)[number]["id"]
+interface ModelSelectorProps {
+  value?: ModelId;
+  onValueChange?: (value: ModelId) => void;
+}
 
-export default function ModelSelector() {
+export default function ModelSelector({ value, onValueChange }: ModelSelectorProps) {
   const [open, setOpen] = React.useState(false)
-  const [selected, setSelected] = React.useState<ModelId>("briefing")
+  const [internalSelected, setInternalSelected] = React.useState<ModelId>("briefing")
+
+  const selected = value ?? internalSelected
 
   const current = MODELS.find((m) => m.id === selected)!
 
@@ -63,7 +69,9 @@ export default function ModelSelector() {
         <RadioGroup
           value={selected}
           onValueChange={(v) => {
-            setSelected(v as ModelId)
+            const m = v as ModelId
+            setInternalSelected(m)
+            onValueChange?.(m)
             setOpen(false)
           }}
           className="gap-0"

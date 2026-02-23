@@ -12,7 +12,7 @@ import type { SourceInfo } from '@/types';
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'sources' | 'chat' | 'toc'>('chat');
   const [activeSource, setActiveSource] = useState<string | SourceInfo | null>(null);
-  const { containerRef, leftOpen, rightOpen, handleToggleLeft, handleToggleRight } = useSidebarResize();
+  const { containerRef, leftOpen, rightOpen, leftWidth, rightWidth, handleToggleLeft, handleToggleRight, handleLeftResizeStart, handleRightResizeStart } = useSidebarResize();
 
   const handleSourceClick = (heading: string) => {
     setActiveSource(heading);
@@ -46,12 +46,24 @@ export default function Home() {
         <div
           className={`
             hidden md:flex flex-col h-full bg-nblm-bg border-r border-nblm-border
-            transition-all duration-300 ease-in-out overflow-hidden shrink-0
-            ${leftOpen ? 'w-[320px]' : 'w-0 border-r-0'}
+            transition-[width] duration-300 ease-in-out overflow-hidden shrink-0
+            ${leftOpen ? '' : 'w-0 border-r-0'}
           `}
+          style={leftOpen ? { width: leftWidth } : undefined}
         >
           <SidebarLeft onToggle={handleToggleLeft} onSourceSelect={setActiveSource} />
         </div>
+
+        {/* LEFT DRAG HANDLE */}
+        {leftOpen && (
+          <div
+            onMouseDown={handleLeftResizeStart}
+            className="hidden md:flex w-1 shrink-0 cursor-col-resize items-center justify-center group z-10 hover:bg-zinc-600/40 transition-colors"
+            title="Drag to resize"
+          >
+            <div className="w-0.5 h-8 rounded-full bg-nblm-border group-hover:bg-zinc-500 transition-colors" />
+          </div>
+        )}
 
         {/* Mobile: only one panel visible at a time */}
         <div className={`${activeTab === 'sources' ? 'flex' : 'hidden'} md:hidden flex-1 flex-col h-full bg-nblm-bg`}>
@@ -77,13 +89,25 @@ export default function Home() {
           />
         </div>
 
+        {/* RIGHT DRAG HANDLE */}
+        {rightOpen && (
+          <div
+            onMouseDown={handleRightResizeStart}
+            className="hidden md:flex w-1 shrink-0 cursor-col-resize items-center justify-center group z-10 hover:bg-zinc-600/40 transition-colors"
+            title="Drag to resize"
+          >
+            <div className="w-0.5 h-8 rounded-full bg-nblm-border group-hover:bg-zinc-500 transition-colors" />
+          </div>
+        )}
+
         {/* RIGHT SIDEBAR */}
         <div
           className={`
             hidden md:flex flex-col h-full bg-nblm-bg border-l border-nblm-border
-            transition-all duration-300 ease-in-out overflow-hidden shrink-0
-            ${rightOpen ? 'w-[320px]' : 'w-0 border-l-0'}
+            transition-[width] duration-300 ease-in-out overflow-hidden shrink-0
+            ${rightOpen ? '' : 'w-0 border-l-0'}
           `}
+          style={rightOpen ? { width: rightWidth } : undefined}
         >
           <SidebarRight markdownContent={SAMPLE_MARKDOWN} onSourceClick={handleSourceClick} onToggle={handleToggleRight} />
         </div>
