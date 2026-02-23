@@ -14,7 +14,9 @@
 4. [Past Case APIs](#past-case-apis)
 5. [Law APIs](#law-apis)
 6. [Unified File Upload API](#unified-file-upload-api)
-7. [RAG Query API](#rag-query-api)
+7. [RAG Query API (LLM)](#rag-query-api)
+   - [Query the LLM](#query-the-llm-rag)
+   - [Get Query Logs](#get-query-logs)
 8. [Legacy APIs](#legacy-apis)
 9. [Error Responses](#error-responses)
 
@@ -616,49 +618,214 @@ curl -X POST http://localhost:8000/api/upload-file \
 
 ## RAG Query API
 
-### Query the RAG System
+The RAG (Retrieval-Augmented Generation) Query API allows you to submit natural language legal questions to the LLM. The system retrieves relevant context from ChromaDB vector stores, assembles it, and passes it to the language model (Ollama) to generate a grounded, citation-backed answer. Responses undergo automatic quality evaluation with retry logic.
 
-Submit a natural language query to search across legal documents.
+### Pipeline Overview
+
+```
+User Query
+    │
+    ▼
+Retrieval (ChromaDB — law, cases, client DBs)
+    │
+    ▼
+Reranking & Context Assembly
+    │
+    ▼
+LLM Generation (Ollama)
+    │
+    ▼
+Evaluation / Judge (score ≥ 7 or is_helpful → return)
+    │    ↖ retry with feedback (up to MAX_RETRIES)
+    ▼
+Formatted Response { answer, sources, confidence, evaluation_metrics }
+```
+
+---
+
+### Query the LLM (RAG)
+
+Submit a natural language legal question. The backend retrieves relevant document chunks from one or more vector databases, feeds them as context to the LLM, evaluates the answer quality, and retries automatically if the score is too low.
 
 | Property | Value |
 |----------|-------|
 | **Endpoint** | `/query` |
 | **Method** | `POST` |
 | **Content-Type** | `application/json` |
+| **Auth Required** | No |
 
 #### Request Body
 
 ```json
 {
-  "query": "What are the fundamental rights in India?",
+  "query": "What are the fundamental rights under Article 21?",
   "databases": ["law_reference_db", "case_history_db"]
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `query` | string | ✅ Yes | Natural language query |
-| `databases` | array | No | List of databases to search (default: law + cases) |
+| `query` | string | ✅ Yes | Natural language legal question |
+| `databases` | array of strings | No | ChromaDB collection names to search. Defaults to `["law_reference_db", "case_history_db"]`. Valid values: `"law_reference_db"`, `"case_history_db"`, `"client_case_db"` |
+
+#### Example Requests
+
+**Search only law database:**
+```json
+{
+  "query": "What does the constitution say about freedom of speech?",
+  "databases": ["law_reference_db"]
+}
+```
+
+**Search all databases including client case files:**
+```json
+{
+  "query": "Is there a precedent for self-defence in Section 96 IPC?",
+  "databases": ["law_reference_db", "case_history_db", "client_case_db"]
+}
+```
+
+**Use defaults (omit `databases`):**
+```json
+{
+  "query": "What is the procedure for filing an FIR?"
+}
+```
 
 #### Response
 
 ```json
 {
-  "answer": "The fundamental rights in India include...",
-  "confidence": "high",
+  "answer": "The right to life and personal liberty under Article 21 guarantees... [SOURCE 1] further elaborates that...",
   "sources": [
     {
-      "source_file": "constitution.pdf",
-      "chunk_text": "Article 14: Right to Equality...",
-      "relevance_score": 0.92
+      "id": 1,
+      "title": "Constitution_Excerpt.txt",
+      "date": "Unknown",
+      "type": "Document"
+    },
+    {
+      "id": 2,
+      "title": "Criminal_Code.txt",
+      "date": "Unknown",
+      "type": "Document"
     }
   ],
+  "confidence": "High",
   "evaluation_metrics": {
-    "score": 0.85,
-    "is_helpful": true
+    "score": 8,
+    "is_helpful": true,
+    "suggestion": null
   }
 }
 ```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `answer` | string | LLM-generated answer grounded in retrieved context. Cites sources as `[SOURCE N]`. |
+| `sources` | array | Up to 5 source documents used as context. |
+| `sources[].id` | integer | 1-based source index (matches `[SOURCE N]` citations in the answer) |
+| `sources[].title` | string | Source document filename or title |
+| `sources[].date` | string | Document date or `"Unknown"` |
+| `sources[].type` | string | Document type label (e.g., `"Document"`) |
+| `confidence` | string | `"High"` if evaluation passed; `"Low"` if all retries exhausted below threshold |
+| `evaluation_metrics` | object | Quality scores from the judge LLM |
+| `evaluation_metrics.score` | integer | Quality score 0–10 (≥7 considered passing) |
+| `evaluation_metrics.is_helpful` | boolean | Whether the answer adequately addresses the query |
+| `evaluation_metrics.suggestion` | string \| null | Feedback used during retry (null on success) |
+| `note` | string | Present only when `confidence` is `"Low"` — explains the low confidence |
+
+#### Low-Confidence Response Example
+
+When all retry attempts fail to reach the quality threshold:
+
+```json
+{
+  "answer": "Based on available context, ...",
+  "sources": [...],
+  "confidence": "Low",
+  "note": "Response quality below threshold after maximum retries.",
+  "evaluation_metrics": {
+    "score": 4,
+    "is_helpful": false,
+    "suggestion": "Provide a more accurate and grounded response."
+  }
+}
+```
+
+#### No-Context Response Example
+
+When no relevant documents are found in the selected databases:
+
+```json
+{
+  "answer": "No relevant context found in the database.",
+  "sources": [],
+  "confidence": "Low",
+  "note": "Response quality below threshold after maximum retries."
+}
+```
+
+#### Error Response
+
+```json
+{
+  "detail": "Connection refused — Ollama may not be running"
+}
+```
+
+> **Note:** The LLM backend uses Ollama running locally. Ensure Ollama is running and the configured generation model is pulled before calling this endpoint.
+
+---
+
+### Get Query Logs
+
+Retrieve recent RAG query history for analytics and auditing. Each log entry records what was queried, which databases were searched, and the quality metrics of the response.
+
+| Property | Value |
+|----------|-------|
+| **Endpoint** | `/query-logs` |
+| **Method** | `GET` |
+| **Auth Required** | No |
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `limit` | integer | No | Max results to return (default: `20`, max: `100`) |
+
+#### Response
+
+```json
+[
+  {
+    "id": 1,
+    "query": "What is Article 21?",
+    "databases": "law_reference_db,case_history_db,client_cases_db",
+    "confidence": "High",
+    "eval_score": 8,
+    "is_helpful": true,
+    "num_sources": 3,
+    "queried_at": "2026-02-23T06:00:00.000000"
+  }
+]
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | integer | Auto-increment log ID |
+| `query` | string | The original query text |
+| `databases` | string | Comma-separated list of databases that were searched |
+| `confidence` | string | `"High"` or `"Low"` |
+| `eval_score` | float \| null | Judge evaluation score (0–10) |
+| `is_helpful` | boolean \| null | Whether the answer was deemed helpful |
+| `num_sources` | integer | Number of source documents retrieved |
+| `queried_at` | datetime | UTC timestamp of the query |
 
 ---
 
@@ -682,40 +849,6 @@ List files from the legacy `ingested_files` table.
 | `case_id` | string | No | Filter by case ID |
 | `limit` | integer | No | Max results (default: 50, max: 200) |
 | `offset` | integer | No | Pagination offset (default: 0) |
-
----
-
-### Get Query Logs
-
-Get recent RAG query logs for analytics.
-
-| Property | Value |
-|----------|-------|
-| **Endpoint** | `/query-logs` |
-| **Method** | `GET` |
-
-#### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `limit` | integer | No | Max results (default: 20, max: 100) |
-
-#### Response
-
-```json
-[
-  {
-    "id": 1,
-    "query": "What is Article 21?",
-    "databases": "law_reference_db,case_history_db",
-    "confidence": "high",
-    "eval_score": 0.92,
-    "is_helpful": true,
-    "num_sources": 3,
-    "queried_at": "2026-02-23T06:00:00.000000"
-  }
-]
-```
 
 ---
 
