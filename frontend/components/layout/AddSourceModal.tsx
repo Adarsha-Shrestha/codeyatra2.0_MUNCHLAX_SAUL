@@ -3,8 +3,9 @@
 import { useState, useRef } from 'react';
 import { X, UploadCloud, Scan } from 'lucide-react';
 import type { AddSourceModalProps, SourceInfo } from '@/types';
+import { uploadCaseFile, getCaseFileDownloadUrl } from '@/lib/api';
 
-export default function AddSourceModal({ isOpen, onClose, onSourceAdded }: AddSourceModalProps) {
+export default function AddSourceModal({ isOpen, onClose, onSourceAdded, caseId }: AddSourceModalProps) {
   const [dragActive, setDragActive] = useState(false);
   const [activeTab, setActiveTab] = useState<'upload' | 'note' | 'scan'>('upload');
   const [noteTitle, setNoteTitle] = useState('');
@@ -36,62 +37,84 @@ export default function AddSourceModal({ isOpen, onClose, onSourceAdded }: AddSo
   };
 
   const handleFileUpload = async (file: File) => {
+    if (!caseId) { alert('Please select a case first'); return; }
     setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('sourceType', 'file');
-    formData.append('dataType', dataType);
-    formData.append('title', file.name);
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (res.ok) { onSourceAdded(await res.json()); onClose(); }
-      else alert('Failed to upload file');
+      const result = await uploadCaseFile(caseId, file);
+      const newSource: SourceInfo = {
+        id: result.file_id?.toString() ?? Date.now().toString(),
+        title: result.filename,
+        sourceType: 'file',
+        dataType,
+        fileType: file.type || 'application/octet-stream',
+        url: result.file_id ? getCaseFileDownloadUrl(result.file_id) : '',
+        createdAt: new Date().toISOString(),
+        status: 'processing',
+      };
+      onSourceAdded(newSource);
+      onClose();
     } catch (error) {
       console.error(error);
-      alert('Upload error');
+      alert(error instanceof Error ? error.message : 'Upload error');
     } finally {
       setUploading(false);
     }
   };
 
   const handleSaveNote = async () => {
+    if (!caseId) { alert('Please select a case first'); return; }
     setUploading(true);
-    const formData = new FormData();
-    formData.append('sourceType', 'note');
-    formData.append('dataType', dataType);
-    formData.append('title', noteTitle || 'Untitled Note');
-    formData.append('content', noteContent);
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (res.ok) {
-        onSourceAdded(await res.json());
-        onClose();
-        setNoteTitle('');
-        setNoteContent('');
-      } else alert('Failed to save note');
+      // Create a text file from the note content and upload it
+      const blob = new Blob([noteContent], { type: 'text/plain' });
+      const fileName = (noteTitle || 'Untitled Note') + '.txt';
+      const file = new File([blob], fileName, { type: 'text/plain' });
+      const result = await uploadCaseFile(caseId, file);
+      const newSource: SourceInfo = {
+        id: result.file_id?.toString() ?? Date.now().toString(),
+        title: fileName,
+        sourceType: 'note',
+        dataType,
+        fileType: 'text/plain',
+        url: result.file_id ? getCaseFileDownloadUrl(result.file_id) : '',
+        createdAt: new Date().toISOString(),
+        status: 'processing',
+      };
+      onSourceAdded(newSource);
+      onClose();
+      setNoteTitle('');
+      setNoteContent('');
     } catch (error) {
       console.error(error);
+      alert('Failed to save note');
     } finally {
       setUploading(false);
     }
   };
 
   const handleSaveScan = async () => {
+    if (!caseId) { alert('Please select a case first'); return; }
     setUploading(true);
-    const formData = new FormData();
-    formData.append('sourceType', 'scan');
-    formData.append('dataType', dataType);
-    formData.append('title', 'Scanned Document');
-    formData.append('content', scanContent);
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (res.ok) {
-        onSourceAdded(await res.json());
-        onClose();
-        setScanContent('');
-      } else alert('Failed to save scan');
+      const blob = new Blob([scanContent], { type: 'text/plain' });
+      const file = new File([blob], 'Scanned_Document.txt', { type: 'text/plain' });
+      const result = await uploadCaseFile(caseId, file);
+      const newSource: SourceInfo = {
+        id: result.file_id?.toString() ?? Date.now().toString(),
+        title: 'Scanned Document',
+        sourceType: 'scan',
+        dataType,
+        fileType: 'text/plain',
+        url: result.file_id ? getCaseFileDownloadUrl(result.file_id) : '',
+        createdAt: new Date().toISOString(),
+        status: 'processing',
+      };
+      onSourceAdded(newSource);
+      onClose();
+      setScanContent('');
     } catch (error) {
       console.error(error);
+      alert('Failed to save scan');
     } finally {
       setUploading(false);
     }

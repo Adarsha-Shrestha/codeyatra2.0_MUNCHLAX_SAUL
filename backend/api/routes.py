@@ -12,6 +12,7 @@ New endpoints added (PostgreSQL-backed):
 """
 
 import os
+import json
 import datetime
 from typing import List, Optional
 
@@ -37,6 +38,9 @@ from config.postgres import (
     CaseFile,
     PastCase,
     Law,
+    ChatSessionRecord,
+    ChatMessageRecord,
+    AnalyticsCache,
 )
 from ingest_cli import ingest_file, ingest_case_file, DB_MAPPING, SUPPORTED_EXTENSIONS, MIME_MAP
 
@@ -830,12 +834,220 @@ async def upload_file_by_type(
 # ──────────────────────────────────────────────────────────────────────────────
 
 @router.post("/analytics")
-def run_analytics(request: AnalyticsRequest):
-    """Generate analytics (checklist, summary, risk assessment, etc.) for a client case."""
+def run_analytics(request: AnalyticsRequest, db: Session = Depends(get_db)):
+    """Generate analytics with caching in PostgreSQL."""
+    # Check cache first
+    cached = (
+        db.query(AnalyticsCache)
+        .filter_by(case_id=int(request.client_case_id) if request.client_case_id.isdigit() else 0, analytic_type=request.analytic_type)
+        .order_by(AnalyticsCache.created_at.desc())
+        .first()
+    )
+    if cached:
+        sources = []
+        if cached.sources_json:
+            try:
+                sources = json.loads(cached.sources_json)
+            except Exception:
+                pass
+        return {
+            "analytic_type": cached.analytic_type,
+            "client_case_id": request.client_case_id,
+            "report": cached.report,
+            "sources": sources,
+            "cached": True,
+        }
+
     result = AnalyticsOrchestrator.generate_analytics(
         client_case_id=request.client_case_id,
         analytic_type=request.analytic_type,
     )
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
+
+    # Cache the result
+    try:
+        cache_entry = AnalyticsCache(
+            case_id=int(request.client_case_id) if request.client_case_id.isdigit() else 0,
+            analytic_type=request.analytic_type,
+            report=result.get("report", ""),
+            sources_json=json.dumps(result.get("sources", [])),
+        )
+        db.add(cache_entry)
+        db.commit()
+    except Exception as e:
+        print(f"Failed to cache analytics: {e}")
+        db.rollback()
+
     return result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CHAT SESSION ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+class ChatMessageIn(BaseModel):
+    role: str
+    content: str
+    ai_response_json: Optional[str] = None
+
+
+class ChatSessionCreate(BaseModel):
+    case_id: Optional[int] = None
+    title: Optional[str] = None
+    messages: List[ChatMessageIn] = []
+
+
+class ChatSessionUpdate(BaseModel):
+    title: Optional[str] = None
+    messages: List[ChatMessageIn] = []
+
+
+@router.get("/chat-sessions", summary="List chat sessions")
+def list_chat_sessions(
+    case_id: Optional[int] = Query(None),
+    limit: int = Query(50, le=200),
+    db: Session = Depends(get_db),
+):
+    q = db.query(ChatSessionRecord).order_by(ChatSessionRecord.updated_at.desc())
+    if case_id is not None:
+        q = q.filter(ChatSessionRecord.case_id == case_id)
+    sessions = q.limit(limit).all()
+    return [
+        {
+            "id": s.id,
+            "case_id": s.case_id,
+            "title": s.title or "Untitled Chat",
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+            "message_count": len(s.messages_rel),
+        }
+        for s in sessions
+    ]
+
+
+@router.get("/chat-sessions/{session_id}", summary="Get a chat session with messages")
+def get_chat_session(session_id: int, db: Session = Depends(get_db)):
+    s = db.query(ChatSessionRecord).filter(ChatSessionRecord.id == session_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Chat session not found.")
+    return {
+        "id": s.id,
+        "case_id": s.case_id,
+        "title": s.title,
+        "created_at": s.created_at.isoformat() if s.created_at else None,
+        "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+        "messages": [
+            {
+                "id": m.id,
+                "role": m.role,
+                "content": m.content,
+                "ai_response_json": m.ai_response_json,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in s.messages_rel
+        ],
+    }
+
+
+@router.post("/chat-sessions", summary="Create or update a chat session")
+def upsert_chat_session(data: ChatSessionCreate, db: Session = Depends(get_db)):
+    session = ChatSessionRecord(
+        case_id=data.case_id,
+        title=data.title or "Untitled Chat",
+    )
+    db.add(session)
+    db.flush()
+
+    for msg in data.messages:
+        db.add(ChatMessageRecord(
+            session_id=session.id,
+            role=msg.role,
+            content=msg.content,
+            ai_response_json=msg.ai_response_json,
+        ))
+    db.commit()
+    db.refresh(session)
+    return {
+        "id": session.id,
+        "case_id": session.case_id,
+        "title": session.title,
+        "created_at": session.created_at.isoformat() if session.created_at else None,
+        "updated_at": session.updated_at.isoformat() if session.updated_at else None,
+        "message_count": len(session.messages_rel),
+    }
+
+
+@router.put("/chat-sessions/{session_id}", summary="Update a chat session")
+def update_chat_session(session_id: int, data: ChatSessionUpdate, db: Session = Depends(get_db)):
+    session = db.query(ChatSessionRecord).filter(ChatSessionRecord.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat session not found.")
+
+    if data.title is not None:
+        session.title = data.title
+    session.updated_at = datetime.datetime.utcnow()
+
+    # Replace all messages
+    for old_msg in session.messages_rel:
+        db.delete(old_msg)
+    db.flush()
+
+    for msg in data.messages:
+        db.add(ChatMessageRecord(
+            session_id=session.id,
+            role=msg.role,
+            content=msg.content,
+            ai_response_json=msg.ai_response_json,
+        ))
+    db.commit()
+    db.refresh(session)
+    return {
+        "id": session.id,
+        "case_id": session.case_id,
+        "title": session.title,
+        "updated_at": session.updated_at.isoformat() if session.updated_at else None,
+        "message_count": len(session.messages_rel),
+    }
+
+
+@router.delete("/chat-sessions/{session_id}", summary="Delete a chat session")
+def delete_chat_session(session_id: int, db: Session = Depends(get_db)):
+    session = db.query(ChatSessionRecord).filter(ChatSessionRecord.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat session not found.")
+    db.delete(session)
+    db.commit()
+    return {"status": "deleted", "id": session_id}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ALL CASES (convenience endpoint for frontend dropdown)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/all-cases", summary="All cases with client info for dropdown")
+def list_all_cases_with_clients(db: Session = Depends(get_db)):
+    cases = db.query(Case).order_by(Case.created_at.desc()).all()
+    return [
+        {
+            "case_id": c.case_id,
+            "client_id": c.client_id,
+            "client_name": c.client.client_name if c.client else "Unknown",
+            "description": c.description,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+            "file_count": len(c.files),
+        }
+        for c in cases
+    ]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ANALYTICS CACHE MANAGEMENT
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.delete("/analytics-cache/{case_id}", summary="Clear analytics cache for a case")
+def clear_analytics_cache(case_id: int, db: Session = Depends(get_db)):
+    db.query(AnalyticsCache).filter(AnalyticsCache.case_id == case_id).delete()
+    db.commit()
+    return {"status": "cleared", "case_id": case_id}

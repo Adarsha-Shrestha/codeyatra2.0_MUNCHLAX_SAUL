@@ -8,6 +8,7 @@ export interface SourceInfo {
   fileType: string;
   url: string;
   createdAt: string;
+  status?: 'pending' | 'processing' | 'success' | 'failed';
 }
 
 // ─── Model Types ──────────────────────────────────────────────────────────────
@@ -103,12 +104,16 @@ export interface ChatAreaProps {
   onToggleLeft?: () => void;
   onToggleRight?: () => void;
   userName?: string;
+  caseId?: number | null;
+  analyticsContent?: string | null;
+  analyticsLoading?: boolean;
 }
 
 export interface SidebarLeftProps {
   onToggle: () => void;
   onSourceSelect: (source: SourceInfo) => void;
   onLoadSession: (session: ChatSession) => void;
+  caseId?: number | null;
 }
 
 export interface SidebarRightProps {
@@ -116,10 +121,24 @@ export interface SidebarRightProps {
   onSourceClick: (heading: string) => void;
   onToggle: () => void;
   checklistData?: ChecklistAnalytic | null;
+  analyticsLoading?: Record<string, boolean>;
+}
+
+export interface HeaderProps {
+  cases: Array<{ case_id: number; client_id: number; client_name: string; description: string | null; file_count: number }>;
+  selectedCaseId: number | null;
+  onCaseChange: (caseId: number) => void;
+  isLoading?: boolean;
+  clients: Array<{ client_id: number; client_name: string; case_count: number }>;
+  selectedClientId: number | null;
+  onClientChange: (clientId: number) => void;
+  onCreateClient: (name: string) => void;
+  clientsLoading?: boolean;
 }
 
 export interface AddSourceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSourceAdded: (source: SourceInfo) => void;
+  caseId?: number | null;
 }

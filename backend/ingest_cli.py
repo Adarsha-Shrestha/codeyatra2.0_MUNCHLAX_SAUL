@@ -348,7 +348,8 @@ def ingest_case_file(
             manual_meta: dict = {
                 "source_file": filename,
                 "case_file_id": file_id,
-                "case_id": case_id,
+                "case_id": str(case_id),
+                "client_case_id": str(case_id),
             }
             final_meta = MetadataExtractor.merge_metadata(extracted_meta, manual_meta)
             

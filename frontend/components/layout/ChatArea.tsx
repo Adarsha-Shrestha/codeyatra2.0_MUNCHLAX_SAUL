@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Settings2, MoreVertical, ArrowUp, X,
   PanelLeft, PanelRight, Link as LinkIcon,
-  Save, Sparkles
+  Save, Sparkles, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BlurText from '@/components/ui/BlurText';
@@ -12,10 +12,37 @@ import type { ChatAreaProps, SourceInfo, Message, ModelId, AIResponse, AISource 
 import { useTheme } from '@/hooks/useTheme';
 import ModelSelector from '@/components/layout/ModelSelector';
 import AssistantMessage from '@/components/layout/AssistantMessage';
+import { queryRAG } from '@/lib/api';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+
+/* ─── Thinking Animation Component ──────────────────────────────────────────── */
+function ThinkingIndicator() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      className="flex justify-start w-full"
+    >
+      <div className="bg-transparent rounded-2xl px-5 py-3 flex items-center gap-2">
+        <span className="text-nblm-text-muted text-[15px] font-medium">Thinking</span>
+        <span className="flex gap-1 items-center">
+          {[0, 1, 2].map(i => (
+            <motion.span
+              key={i}
+              className="w-1.5 h-1.5 rounded-full bg-nblm-text-muted"
+              animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.1, 0.8] }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+            />
+          ))}
+        </span>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function ChatArea({
   activeSource,
@@ -28,7 +55,10 @@ export default function ChatArea({
   rightOpen,
   onToggleLeft,
   onToggleRight,
-  userName = 'Rohan'
+  userName,
+  caseId,
+  analyticsContent,
+  analyticsLoading,
 }: ChatAreaProps) {
   const { theme } = useTheme();
   const logoSrc = theme === 'light' ? '/logo_light.png' : '/logo.png';
@@ -37,6 +67,7 @@ export default function ChatArea({
   const [messages, setMessages] = useState<Message[]>(initialMessages ?? []);
   const [inputValue, setInputValue] = useState('');
   const [selectedModel, setSelectedModel] = useState<ModelId>('briefing');
+  const [isThinking, setIsThinking] = useState(false);
 
   // Reset messages when a session is loaded
   useEffect(() => {
@@ -85,34 +116,27 @@ export default function ChatArea({
     }
   };
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-    const newMsg: Message = { id: Date.now().toString(), role: 'user', content: inputValue };
+  const handleSendMessage = useCallback(async () => {
+    if (!inputValue.trim() || isThinking) return;
+    const userQuery = inputValue.trim();
+    const newMsg: Message = { id: Date.now().toString(), role: 'user', content: userQuery };
     setMessages(prev => [...prev, newMsg]);
     setInputValue('');
+    setIsThinking(true);
 
-    // TODO: replace with real API call — mock demo response
-    setTimeout(() => {
-      const mockResponse: AIResponse = {
-        answer:
-          "Case 001 pertains to the theft of Sita Sharma's red mountain bike. On April 9th, at approximately 2:30 PM, Sita parked her bike outside a grocery store in Patan Durbar Square. Upon returning around 15 minutes later, she found her bike missing. A local shopkeeper reported seeing Raju Karki near the bike as he ridden it away.\n\nIn an affidavit from Gopal Shrestha, another witness at the scene, Raju Karki was observed near a parked red mountain bike on the same day. Shrestha described witnessing Raju unlock or break the lock and ride away. He also mentioned knowing Raju from the neighborhood and recognizing him clearly.\n\nBoth the FIRs (Sources 4 and 5) corroborate these accounts, suggesting that the theft involved Raju Karki. Therefore, Case 001 likely involves this incident of theft by Raju Karki, supported by evidence from multiple witnesses. [SOURCE 4], [SOURCE 5].",
-        sources: [
-          { id: 1, title: 'Affidavit.txt', date: 'Unknown', type: 'Document' },
-          { id: 2, title: 'Affidavit.txt', date: 'Unknown', type: 'Document' },
-          { id: 3, title: 'Affidavit', date: 'Unknown', type: 'client_case' },
-          { id: 4, title: 'FIR.txt', date: 'Unknown', type: 'Document' },
-          { id: 5, title: 'First Information Report (FIR)', date: '2024-04-10', type: 'Document' },
-        ],
-        confidence: 'High',
-        evaluation_metrics: {
-          score: 7,
-          is_helpful: true,
-          is_grounded: true,
+    try {
+      const data = await queryRAG(userQuery);
+      const aiResponse: AIResponse = {
+        answer: data.answer || data.response || 'No answer returned.',
+        sources: data.sources || [],
+        confidence: data.confidence || 'Medium',
+        evaluation_metrics: data.evaluation_metrics || {
+          score: 0,
+          is_helpful: false,
+          is_grounded: false,
           hallucination_detected: false,
-          reason:
-            'The answer correctly summarizes the case but contains minor inaccuracies. The event was actually filed on April 10th, not April 9th.',
-          suggestion:
-            'Correct the date from April 9th to April 10th and fix the grammar in the request statement.',
+          reason: '',
+          suggestion: '',
         },
       };
       setMessages(prev => [
@@ -120,12 +144,24 @@ export default function ChatArea({
         {
           id: Date.now().toString(),
           role: 'assistant',
-          content: mockResponse.answer,
-          aiResponse: mockResponse,
+          content: aiResponse.answer,
+          aiResponse,
         },
       ]);
-    }, 1000);
-  };
+    } catch (error) {
+      console.error('RAG query failed:', error);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: 'Sorry, I encountered an error processing your request. Please try again.',
+        },
+      ]);
+    } finally {
+      setIsThinking(false);
+    }
+  }, [inputValue, isThinking]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -197,9 +233,20 @@ export default function ChatArea({
               <h1 className="text-2xl font-bold text-nblm-text mb-6 border-b border-nblm-border pb-4 w-full md:max-w-4xl mx-auto">
                 {activeSource}
               </h1>
-              <p className="text-nblm-text-muted leading-relaxed md:max-w-4xl mx-auto text-sm md:text-base">
-                This is a simulated view of the source material for the section: &quot;{activeSource}&quot;.
-              </p>
+              {analyticsLoading ? (
+                <div className="flex flex-col items-center justify-center flex-1 gap-3 md:max-w-4xl mx-auto">
+                  <Loader2 className="w-8 h-8 text-nblm-text-muted animate-spin" />
+                  <p className="text-nblm-text-muted text-sm">Running analysis...</p>
+                </div>
+              ) : analyticsContent ? (
+                <div className="text-nblm-text leading-relaxed md:max-w-4xl mx-auto text-sm md:text-base whitespace-pre-wrap">
+                  {analyticsContent}
+                </div>
+              ) : (
+                <p className="text-nblm-text-muted leading-relaxed md:max-w-4xl mx-auto text-sm md:text-base">
+                  Click a heading in the Table of Contents to run analytics for this case.
+                </p>
+              )}
             </>
           ) : isText ? (
             <textarea
@@ -292,7 +339,7 @@ export default function ChatArea({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto w-full max-w-3xl mx-auto flex flex-col pt-3 pb-40 px-6 scroll-smooth">
+      <div className="flex-1 overflow-y-auto w-full max-w-3xl mx-auto flex flex-col pt-3 pb-40 px-6 scroll-smooth scrollbar-none">
         <AnimatePresence mode="wait">
           {messages.length === 0 ? (
             <motion.div
@@ -311,7 +358,7 @@ export default function ChatArea({
                 style={{ filter: 'brightness(1.1)' }}
               />
               <BlurText
-                text={`Good Afternoon, ${userName}`}
+                text={userName ? `Good Afternoon, ${userName}` : 'Good Afternoon'}
                 delay={50}
                 animateBy="words"
                 direction="top"
@@ -345,16 +392,17 @@ export default function ChatArea({
                         response={msg.aiResponse}
                         model={selectedModel}
                         onSourceClick={async (src: AISource) => {
-                          try {
-                            const res = await fetch('/api/sources');
-                            const list: SourceInfo[] = await res.json();
-                            const match = list.find(
-                              (s) => s.title.toLowerCase() === src.title.toLowerCase()
-                            );
-                            if (match) onSourceSelect?.(match);
-                          } catch (e) {
-                            console.error('Could not open source:', e);
-                          }
+                          // Try to match by title; if no local match, create a stub
+                          const match: SourceInfo = {
+                            id: src.id.toString(),
+                            title: src.title,
+                            sourceType: 'file',
+                            dataType: '1',
+                            fileType: 'text/plain',
+                            url: '',
+                            createdAt: src.date || '',
+                          };
+                          onSourceSelect?.(match);
                         }}
                       />
                     ) : msg.role === 'assistant' ? (
@@ -365,6 +413,10 @@ export default function ChatArea({
                   </div>
                 </motion.div>
               ))}
+              {/* Thinking animation */}
+              <AnimatePresence>
+                {isThinking && <ThinkingIndicator />}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>

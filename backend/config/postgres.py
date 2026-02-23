@@ -293,6 +293,72 @@ class QueryLog(Base):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Chat Session / Message tables
+# ──────────────────────────────────────────────────────────────────────────────
+class ChatSessionRecord(Base):
+    """Persisted chat sessions (one per conversation)."""
+
+    __tablename__ = "chat_sessions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    case_id = Column(Integer, nullable=True)
+    title = Column(String(256), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(
+        DateTime,
+        default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow,
+    )
+
+    messages_rel = relationship(
+        "ChatMessageRecord",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="ChatMessageRecord.created_at",
+    )
+
+    def __repr__(self) -> str:
+        return f"<ChatSession id={self.id} title={self.title}>"
+
+
+class ChatMessageRecord(Base):
+    """Individual messages within a chat session."""
+
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, ForeignKey("chat_sessions.id"), nullable=False)
+    role = Column(String(16), nullable=False)
+    content = Column(Text, nullable=False)
+    ai_response_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    session = relationship("ChatSessionRecord", back_populates="messages_rel")
+
+    def __repr__(self) -> str:
+        return f"<ChatMessage id={self.id} role={self.role}>"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Analytics cache
+# ──────────────────────────────────────────────────────────────────────────────
+class AnalyticsCache(Base):
+    """Cached analytics results to avoid recomputing."""
+
+    __tablename__ = "analytics_cache"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    case_id = Column(Integer, nullable=False)
+    analytic_type = Column(String(64), nullable=False)
+    report = Column(Text, nullable=False)
+    sources_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<AnalyticsCache id={self.id} case_id={self.case_id} type={self.analytic_type}>"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 def init_db() -> None:
