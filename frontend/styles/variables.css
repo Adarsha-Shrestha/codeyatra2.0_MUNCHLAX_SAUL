@@ -1,0 +1,23 @@
+/**
+ * CSS custom properties reference — these mirror the Tailwind @theme values
+ * defined in globals.css. Import this file in any component-level CSS module
+ * if you need access to the design tokens without Tailwind classes.
+ */
+
+:root {
+  /* Background colors */
+  --color-nblm-bg: #1c2125;
+  --color-nblm-panel: #252c31;
+
+  /* Border */
+  --color-nblm-border: #2f383e;
+
+  /* Text */
+  --color-nblm-text: #82878b;
+  --color-nblm-text-muted: #585f64;
+  --color-nblm-accent: #82878b;
+
+  /* Page-level */
+  --background: #1f1b16;
+  --foreground: #887d73;
+}
