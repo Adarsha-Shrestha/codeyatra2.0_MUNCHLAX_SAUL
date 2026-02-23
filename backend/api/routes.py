@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from orchestrator import RAGOrchestrator
+from analytics_orchestrator import AnalyticsOrchestrator
 from config.database import db_client
 from config.settings import settings
 from config.postgres import (
@@ -49,6 +50,11 @@ router = APIRouter()
 class QueryRequest(BaseModel):
     query: str
     databases: Optional[List[str]] = [settings.LAW_DB_NAME, settings.CASES_DB_NAME]
+
+
+class AnalyticsRequest(BaseModel):
+    client_case_id: str
+    analytic_type: str
 
 
 class FileOut(BaseModel):
@@ -817,3 +823,19 @@ async def upload_file_by_type(
             "filename": filename,
             "message": "Law document stored (no ingestion performed)",
         }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Analytics
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.post("/analytics")
+def run_analytics(request: AnalyticsRequest):
+    """Generate analytics (checklist, summary, risk assessment, etc.) for a client case."""
+    result = AnalyticsOrchestrator.generate_analytics(
+        client_case_id=request.client_case_id,
+        analytic_type=request.analytic_type,
+    )
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result

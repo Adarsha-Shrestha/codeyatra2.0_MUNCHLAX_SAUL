@@ -1,4 +1,5 @@
 import os
+import chromadb
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from config.postgres import engine, SessionLocal, Base, TargetDB, IngestionStatus
 from sqlalchemy import create_engine
@@ -63,5 +64,15 @@ settings = Settings()
 class DatabaseClient:
     def __init__(self):
         init_db()
+        self._chroma_client = chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIR)
+
+    def get_law_db(self):
+        return self._chroma_client.get_or_create_collection(name=settings.LAW_DB_NAME)
+
+    def get_cases_db(self):
+        return self._chroma_client.get_or_create_collection(name=settings.CASES_DB_NAME)
+
+    def get_client_db(self):
+        return self._chroma_client.get_or_create_collection(name=settings.CLIENT_DB_NAME)
 
 db_client = DatabaseClient()
