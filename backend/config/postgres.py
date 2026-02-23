@@ -5,9 +5,14 @@ PostgreSQL integration via SQLAlchemy (sync).
 
 Tables
 ──────
-• ingested_files  – one row per file; stores the actual binary via BYTEA
-• case_records    – one row per unique client case
-• query_logs      – every RAG query + evaluation score
+• client_table     – client information (client_id, name, phone, address, photo)
+• case_table       – cases linked to clients
+• case_file_table  – files for active cases (with ingestion)
+• past_case_table  – historical case references (no ingestion)
+• law_table        – law/constitution files (no ingestion)
+• ingested_files   – one row per file; stores the actual binary via BYTEA
+• case_records     – one row per unique client case (legacy)
+• query_logs       – every RAG query + evaluation score
 """
 
 from __future__ import annotations
@@ -67,8 +72,131 @@ class IngestionStatus(str, enum.Enum):
     failed = "failed"
 
 
+class FileType(str, enum.Enum):
+    """Type of file being uploaded - determines processing pipeline."""
+    case_file = "case_file"      # Active case files → ingestion + ChromaDB
+    past_case = "past_case"      # Historical cases → storage only
+    law = "law"                  # Law/constitution → storage only
+
+
 # ──────────────────────────────────────────────────────────────────────────────
-# ORM Models
+# NEW ORM Models (client_table, case_table, case_file_table, past_case_table, law_table)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class Client(Base):
+    """Client information table."""
+
+    __tablename__ = "client_table"
+
+    client_id = Column(Integer, primary_key=True, autoincrement=True)
+    client_name = Column(String(256), nullable=False)
+    phone = Column(String(32), nullable=True)
+    address = Column(Text, nullable=True)
+    photo = Column(LargeBinary, nullable=True)  # Client photo stored as BYTEA
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(
+        DateTime,
+        default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow,
+    )
+
+    # Relationship: one client has many cases
+    cases = relationship("Case", back_populates="client", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:
+        return f"<Client client_id={self.client_id} name={self.client_name}>"
+
+
+class Case(Base):
+    """Active case linked to a client."""
+
+    __tablename__ = "case_table"
+
+    case_id = Column(Integer, primary_key=True, autoincrement=True)
+    client_id = Column(Integer, ForeignKey("client_table.client_id"), nullable=False)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(
+        DateTime,
+        default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow,
+    )
+
+    # Relationships
+    client = relationship("Client", back_populates="cases")
+    files = relationship("CaseFile", back_populates="case", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:
+        return f"<Case case_id={self.case_id} client_id={self.client_id}>"
+
+
+class CaseFile(Base):
+    """Files associated with an active case - these get ingested into ChromaDB."""
+
+    __tablename__ = "case_file_table"
+
+    file_id = Column(Integer, primary_key=True, autoincrement=True)
+    case_id = Column(Integer, ForeignKey("case_table.case_id"), nullable=False)
+    filename = Column(String(512), nullable=False)
+    extension = Column(String(16), nullable=True)
+    file = Column(LargeBinary, nullable=False)  # File content as BYTEA
+    mime_type = Column(String(128), nullable=True)
+    file_size_bytes = Column(Integer, nullable=True)
+    status = Column(
+        SAEnum(IngestionStatus, name="case_file_ingestion_status_enum"),
+        nullable=False,
+        default=IngestionStatus.pending,
+    )
+    chunk_count = Column(Integer, nullable=True)
+    error_message = Column(Text, nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
+    ingested_at = Column(DateTime, nullable=True)
+
+    # Relationship
+    case = relationship("Case", back_populates="files")
+
+    def __repr__(self) -> str:
+        return f"<CaseFile file_id={self.file_id} filename={self.filename}>"
+
+
+class PastCase(Base):
+    """Historical/reference case documents - stored only, no ingestion."""
+
+    __tablename__ = "past_case_table"
+
+    past_case_id = Column(Integer, primary_key=True, autoincrement=True)
+    case_name = Column(String(512), nullable=False)
+    case_file = Column(LargeBinary, nullable=False)  # PDF/TXT stored as BYTEA
+    filename = Column(String(512), nullable=True)
+    extension = Column(String(16), nullable=True)
+    mime_type = Column(String(128), nullable=True)
+    file_size_bytes = Column(Integer, nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<PastCase past_case_id={self.past_case_id} name={self.case_name}>"
+
+
+class Law(Base):
+    """Law and constitution reference documents - stored only, no ingestion."""
+
+    __tablename__ = "law_table"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    law_of_country = Column(String(256), nullable=False)
+    constitution_file = Column(LargeBinary, nullable=False)  # PDF/TXT stored as BYTEA
+    filename = Column(String(512), nullable=True)
+    extension = Column(String(16), nullable=True)
+    mime_type = Column(String(128), nullable=True)
+    file_size_bytes = Column(Integer, nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<Law id={self.id} country={self.law_of_country}>"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Legacy ORM Models (kept for backward compatibility)
 # ──────────────────────────────────────────────────────────────────────────────
 class CaseRecord(Base):
     """One row per unique client case."""
