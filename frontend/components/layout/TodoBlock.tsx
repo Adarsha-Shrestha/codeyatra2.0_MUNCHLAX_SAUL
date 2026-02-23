@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { parseChecklistReport, loadDoneState, saveDoneState } from '@/lib/parseTodo';
 import type { ChecklistAnalytic, TodoItem } from '@/types';
 import { useTheme } from '@/hooks/useTheme';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface TodoBlockProps {
   data: ChecklistAnalytic;
@@ -183,24 +185,30 @@ function TodoRow({ item, onToggle }: { item: TodoItem; onToggle: (id: string) =>
       {/* Text */}
       <div className="flex-1 min-w-0">
         <motion.p
-          animate={{ color: item.done
-            ? (isLight ? 'rgb(160,156,148)' : 'rgb(82,82,91)')
-            : (isLight ? 'rgb(60,60,56)'   : 'rgb(228,228,231)') }}
+          animate={{
+            color: item.done
+              ? (isLight ? 'rgb(160,156,148)' : 'rgb(82,82,91)')
+              : (isLight ? 'rgb(60,60,56)' : 'rgb(228,228,231)')
+          }}
           transition={{ duration: 0.2 }}
           className={cn("text-[13px] font-medium leading-snug", item.done && "line-through")}
         >
           {item.label}
         </motion.p>
         {item.description && (
-          <motion.p
-            animate={{ color: item.done
-              ? (isLight ? 'rgb(180,176,168)' : 'rgb(63,63,70)')
-              : (isLight ? 'rgb(122,120,112)' : 'rgb(88,95,100)') }}
+          <motion.div
+            animate={{
+              color: item.done
+                ? (isLight ? 'rgb(180,176,168)' : 'rgb(100,100,100)')
+                : (isLight ? 'rgb(122,120,112)' : 'rgb(161,161,170)')
+            }}
             transition={{ duration: 0.2 }}
-            className="text-[11px] mt-0.5 leading-snug"
+            className="text-[11px] mt-0.5 leading-snug prose prose-sm prose-invert prose-p:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0 max-w-none text-current"
           >
-            {item.description}
-          </motion.p>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {item.description}
+            </ReactMarkdown>
+          </motion.div>
         )}
       </div>
     </button>

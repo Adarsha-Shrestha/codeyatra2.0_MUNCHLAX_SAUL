@@ -133,6 +133,7 @@ export interface HeaderProps {
   selectedClientId: number | null;
   onClientChange: (clientId: number) => void;
   onCreateClient: (name: string) => void;
+  onCreateCase?: (clientId: number, description: string) => void;
   clientsLoading?: boolean;
 }
 

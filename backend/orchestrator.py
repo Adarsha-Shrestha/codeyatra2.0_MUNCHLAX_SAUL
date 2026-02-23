@@ -7,13 +7,14 @@ from config.settings import settings
 
 class RAGOrchestrator:
     @staticmethod
-    def process_query(query: str, db_names: List[str] = None) -> Dict[str, Any]:
+    def process_query(query: str, db_names: List[str] = None, case_id: int = None) -> Dict[str, Any]:
         """Runs the full RAG pipeline: retrieval, generation, evaluation, and retry loop."""
         if db_names is None:
             db_names = [settings.LAW_DB_NAME, settings.CASES_DB_NAME, settings.CLIENT_DB_NAME]
             
         # 1. Retrieval
-        raw_results = QuerySearcher.search(query, db_names=db_names)
+        client_case_id = str(case_id) if case_id else None
+        raw_results = QuerySearcher.search(query, db_names=db_names, client_case_id=client_case_id)
         ranked_results = ResultRanker.rank_and_filter(raw_results)
         
         if not ranked_results:

@@ -6,7 +6,7 @@ import TodoBlock from '@/components/layout/TodoBlock';
 import { ANALYTICS_HEADING_MAP } from '@/lib/constants';
 
 /* ─── Ghost skeleton shown when no checklist data is available ────────────── */
-function TodoGhost() {
+function TodoGhost({ onGenerate, isGenerating }: { onGenerate?: () => void; isGenerating?: boolean }) {
   return (
     <div className="border-t border-nblm-border">
       <div className="w-full flex items-center justify-between px-4 py-3">
@@ -17,9 +17,28 @@ function TodoGhost() {
         </div>
         <ChevronDown className="w-4 h-4 text-nblm-text-muted" />
       </div>
-      <div className="px-4 pb-4 space-y-3 animate-pulse">
+
+      {/* Generate Button Container */}
+      <div className="px-4 pb-4">
+        <button
+          onClick={onGenerate}
+          disabled={isGenerating || !onGenerate}
+          className="w-full py-2 px-3 bg-zinc-800 hover:bg-zinc-700 text-nblm-text text-[13px] font-medium rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            'Generate Checklist'
+          )}
+        </button>
+      </div>
+
+      <div className="px-4 pb-4 space-y-3 animate-pulse opacity-50">
         <div className="h-1 w-full bg-nblm-panel rounded-full" />
-        {[1, 2, 3].map(i => (
+        {[1, 2].map(i => (
           <div key={i} className="flex items-start gap-3 px-3">
             <div className="w-4 h-4 rounded border border-nblm-border bg-nblm-panel shrink-0 mt-0.5" />
             <div className="flex-1 space-y-1.5">
@@ -33,7 +52,7 @@ function TodoGhost() {
   );
 }
 
-export default function SidebarRight({ markdownContent, onSourceClick, onToggle, checklistData, analyticsLoading }: SidebarRightProps) {
+export default function SidebarRight({ markdownContent, onSourceClick, onToggle, checklistData, analyticsLoading, onGenerateChecklist }: SidebarRightProps & { onGenerateChecklist?: () => void }) {
   const loadingMap = analyticsLoading ?? {};
   const headings = markdownContent
     .split('\n')
@@ -98,7 +117,7 @@ export default function SidebarRight({ markdownContent, onSourceClick, onToggle,
       </div>
 
       {/* ── Todo Block ─────────────────────── */}
-      {checklistData ? <TodoBlock data={checklistData} /> : <TodoGhost />}
+      {checklistData ? <TodoBlock data={checklistData} /> : <TodoGhost onGenerate={onGenerateChecklist} isGenerating={loadingMap['checklist']} />}
     </aside>
   );
 }

@@ -9,7 +9,7 @@ import SidebarRight from '@/components/layout/SidebarRight';
 import { useSidebarResize } from '@/hooks/useSidebarResize';
 import { ANALYTICS_MARKDOWN, ANALYTICS_HEADING_MAP } from '@/lib/constants';
 import { upsertSession } from '@/lib/chatHistory';
-import { fetchAnalytics, fetchClients, createClient, fetchCasesForClient, type AllCaseItem, type BackendClient } from '@/lib/api';
+import { fetchAnalytics, fetchClients, createClient, createCase, fetchCasesForClient, type AllCaseItem, type BackendClient } from '@/lib/api';
 import type { SourceInfo, Message, ChatSession, ChecklistAnalytic } from '@/types';
 
 export default function Page() {
@@ -124,6 +124,52 @@ function Home() {
     }
   }, []);
 
+  const handleCreateCase = useCallback(async (clientId: number, description: string) => {
+    try {
+      const newCase = await createCase(clientId, description);
+      const clientName = clients.find(c => c.client_id === clientId)?.client_name || 'Unknown';
+      const mappedCase: AllCaseItem = {
+        ...newCase,
+        client_name: clientName,
+      };
+
+      setCases(prev => [mappedCase, ...prev]);
+      setSelectedCaseId(mappedCase.case_id);
+
+      // Select appropriate client if not already
+      if (selectedClientId !== clientId) {
+        setSelectedClientId(clientId);
+      }
+    } catch (err) {
+      console.error('Failed to create case:', err);
+    }
+  }, [clients, selectedClientId]);
+
+  const handleGenerateChecklist = useCallback(async () => {
+    if (!selectedCaseId) return;
+
+    if (checklistData) return;
+
+    setAnalyticsLoading(prev => ({ ...prev, 'checklist': true }));
+    try {
+      const result = await fetchAnalytics(selectedCaseId, 'checklist');
+      setChecklistData({
+        analytic_type: 'checklist',
+        client_case_id: selectedCaseId.toString(),
+        report: result.report,
+        sources: result.sources,
+      });
+      setAnalyticsResults(prev => ({
+        ...prev,
+        ['Procedural Checklist']: { report: result.report, sources: result.sources || [] },
+      }));
+    } catch (err) {
+      console.error('Manual fetch checklist error:', err);
+    } finally {
+      setAnalyticsLoading(prev => ({ ...prev, 'checklist': false }));
+    }
+  }, [selectedCaseId, checklistData]);
+
   const handleSourceClick = useCallback(async (heading: string) => {
     const analyticType = ANALYTICS_HEADING_MAP[heading];
 
@@ -207,6 +253,7 @@ function Home() {
         selectedClientId={selectedClientId}
         onClientChange={handleClientChange}
         onCreateClient={handleCreateClient}
+        onCreateCase={handleCreateCase}
         clientsLoading={clientsLoading}
       />
 
@@ -311,6 +358,7 @@ function Home() {
             onToggle={handleToggleRight}
             checklistData={checklistData}
             analyticsLoading={analyticsLoading}
+            onGenerateChecklist={handleGenerateChecklist}
           />
         </div>
 
@@ -322,6 +370,7 @@ function Home() {
             onToggle={() => setActiveTab('chat')}
             checklistData={checklistData}
             analyticsLoading={analyticsLoading}
+            onGenerateChecklist={handleGenerateChecklist}
           />
         </div>
       </div>

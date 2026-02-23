@@ -12,6 +12,8 @@ import type { ChatAreaProps, SourceInfo, Message, ModelId, AIResponse, AISource 
 import { useTheme } from '@/hooks/useTheme';
 import ModelSelector from '@/components/layout/ModelSelector';
 import AssistantMessage from '@/components/layout/AssistantMessage';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { queryRAG } from '@/lib/api';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -72,7 +74,7 @@ export default function ChatArea({
   // Reset messages when a session is loaded
   useEffect(() => {
     setMessages(initialMessages ?? []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionKey]);
 
   // Autosave — debounced 2s after messages change
@@ -90,10 +92,14 @@ export default function ChatArea({
 
   useEffect(() => {
     if (typeof activeSource !== 'string' && activeSource?.fileType.includes('text')) {
-      fetch(activeSource.url)
-        .then(res => res.text())
-        .then(text => setTextContent(text))
-        .catch(err => console.error('Failed to load text:', err));
+      if (activeSource.url) {
+        fetch(activeSource.url)
+          .then(res => res.text())
+          .then(text => setTextContent(text))
+          .catch(err => console.error('Failed to load text:', err));
+      } else {
+        setTextContent('Actual source content preview is unavailable for AI responses.');
+      }
     }
   }, [activeSource]);
 
@@ -125,7 +131,7 @@ export default function ChatArea({
     setIsThinking(true);
 
     try {
-      const data = await queryRAG(userQuery);
+      const data = await queryRAG(userQuery, undefined, caseId !== null ? caseId : undefined);
       const aiResponse: AIResponse = {
         answer: data.answer || data.response || 'No answer returned.',
         sources: data.sources || [],
@@ -227,7 +233,7 @@ export default function ChatArea({
         </div>
 
         {/* Source Content */}
-        <div className={`flex-1 overflow-hidden flex flex-col ${isPdf ? '' : 'p-6 md:p-8'}`}>
+        <div className={`flex-1 overflow-y-auto flex flex-col ${isPdf ? 'overflow-hidden' : 'p-6 md:p-8'}`}>
           {isString ? (
             <>
               <h1 className="text-2xl font-bold text-nblm-text mb-6 border-b border-nblm-border pb-4 w-full md:max-w-4xl mx-auto">
@@ -239,8 +245,21 @@ export default function ChatArea({
                   <p className="text-nblm-text-muted text-sm">Running analysis...</p>
                 </div>
               ) : analyticsContent ? (
-                <div className="text-nblm-text leading-relaxed md:max-w-4xl mx-auto text-sm md:text-base whitespace-pre-wrap">
-                  {analyticsContent}
+                <div className="text-nblm-text leading-relaxed md:max-w-4xl mx-auto text-sm md:text-base whitespace-pre-wrap prose prose-invert prose-zinc max-w-none
+                  prose-headings:font-bold prose-headings:text-zinc-100 prose-headings:mt-6 prose-headings:mb-3
+                  prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
+                  prose-p:mb-4 prose-p:last:mb-0
+                  prose-a:text-blue-400 prose-a:no-underline hover:prose-a:text-blue-300
+                  prose-strong:text-zinc-200
+                  prose-ul:list-disc prose-ul:ml-5 prose-ul:mb-4
+                  prose-ol:list-decimal prose-ol:ml-5 prose-ol:mb-4
+                  prose-li:my-1
+                  prose-blockquote:border-l-2 prose-blockquote:border-zinc-700 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-zinc-400
+                  prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-pre:rounded-lg
+                  prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-zinc-800 prose-code:rounded-md prose-code:text-sm">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {analyticsContent}
+                  </ReactMarkdown>
                 </div>
               ) : (
                 <p className="text-nblm-text-muted leading-relaxed md:max-w-4xl mx-auto text-sm md:text-base">
@@ -381,11 +400,10 @@ export default function ChatArea({
                   className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 text-[15px] leading-relaxed ${
-                      msg.role === 'user'
-                        ? 'bg-nblm-bg text-nblm-text border border-nblm-border'
-                        : 'bg-transparent text-nblm-text w-full max-w-full'
-                    }`}
+                    className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 text-[15px] leading-relaxed ${msg.role === 'user'
+                      ? 'bg-nblm-bg text-nblm-text border border-nblm-border'
+                      : 'bg-transparent text-nblm-text w-full max-w-full'
+                      }`}
                   >
                     {msg.role === 'assistant' && msg.aiResponse ? (
                       <AssistantMessage
@@ -427,7 +445,7 @@ export default function ChatArea({
         <div className="max-w-3xl mx-auto">
           {messages.length > 0 && (
             <p className="text-[11px] text-nblm-text-muted text-center mb-4">Today • {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
-           
+
           )}
           <div className="relative bg-nblm-bg rounded-full border border-nblm-border shadow-lg overflow-hidden focus-within:ring-1 focus-within:ring-nblm-border transition-all">
             <textarea

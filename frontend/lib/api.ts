@@ -3,7 +3,7 @@
  * All calls go through Next.js rewrites: /api/backend/* → http://localhost:8000/api/*
  */
 
-const API = '/api/backend';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
@@ -17,7 +17,7 @@ export async function fetchClients(): Promise<BackendClient[]> {
   }
 }
 
-export async function createClient(data: { client_name: string; phone?: string; address?: string }) {
+export async function createClient(data: { client_name: string; phone?: string; address?: string }): Promise<BackendClient> {
   const res = await fetch(`${API}/clients`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -87,13 +87,14 @@ export function getCaseFileDownloadUrl(fileId: number): string {
 
 // ─── RAG Query ────────────────────────────────────────────────────────────────
 
-export async function queryRAG(query: string, databases?: string[]) {
+export async function queryRAG(query: string, databases?: string[], caseId?: number) {
   const res = await fetch(`${API}/query`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       query,
       databases: databases || ['law_reference_db', 'case_history_db', 'client_cases_db'],
+      case_id: caseId,
     }),
   });
   if (!res.ok) throw new Error('Query failed');

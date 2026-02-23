@@ -9,7 +9,6 @@ export const CHAT_MIN_WIDTH = 420;
 
 export const ANALYTICS_MARKDOWN = `
 # Case Analysis
-## Procedural Checklist
 ## Evidence Gap Analysis
 ## Argument Mapping
 ## Risk Assessment

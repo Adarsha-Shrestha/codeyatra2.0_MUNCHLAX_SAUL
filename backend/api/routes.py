@@ -54,6 +54,7 @@ router = APIRouter()
 class QueryRequest(BaseModel):
     query: str
     databases: Optional[List[str]] = [settings.LAW_DB_NAME, settings.CASES_DB_NAME]
+    case_id: Optional[int] = None
 
 
 class AnalyticsRequest(BaseModel):
@@ -176,7 +177,7 @@ class LawOut(BaseModel):
 @router.post("/query")
 async def query_rag(request: QueryRequest, db: Session = Depends(get_db)):
     try:
-        result = RAGOrchestrator.process_query(request.query, request.databases)
+        result = RAGOrchestrator.process_query(request.query, request.databases, request.case_id)
 
         # Persist query log
         eval_data = result.get("evaluation_metrics", {})

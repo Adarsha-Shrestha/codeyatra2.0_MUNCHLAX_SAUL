@@ -15,7 +15,7 @@ class QuerySearcher:
         return filters
 
     @staticmethod
-    def search(query: str, db_names: List[str], top_k: int = 5, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def search(query: str, db_names: List[str], top_k: int = 5, filters: Optional[Dict[str, Any]] = None, client_case_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Embedded query search across specified databases."""
         if not filters:
             filters = QuerySearcher.preprocess_query(query)
@@ -45,8 +45,14 @@ class QuerySearcher:
                     "query_embeddings": [query_embedding],
                     "n_results": top_k
                 }
-                if filters:
-                    clargs["where"] = filters
+                
+                # Copy filters so we don't accidentally mutate it for subsequent DBs
+                current_filters = filters.copy() if filters else {}
+                if db_name == settings.CLIENT_DB_NAME and client_case_id:
+                     current_filters["client_case_id"] = client_case_id
+                     
+                if current_filters:
+                    clargs["where"] = current_filters
                     
                 results = collection.query(**clargs)
                 

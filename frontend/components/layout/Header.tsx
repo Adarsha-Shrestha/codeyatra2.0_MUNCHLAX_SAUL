@@ -12,11 +12,15 @@ import {
 
 export default function Header({
   cases, selectedCaseId, onCaseChange, isLoading,
-  clients, selectedClientId, onClientChange, onCreateClient, clientsLoading,
+  clients, selectedClientId, onClientChange, onCreateClient, onCreateCase, clientsLoading,
 }: HeaderProps) {
   const { theme, toggle } = useTheme();
   const [showNewClientInput, setShowNewClientInput] = useState(false);
   const [newClientName, setNewClientName] = useState('');
+
+  // New Case State
+  const [showNewCaseInput, setShowNewCaseInput] = useState(false);
+  const [newCaseDesc, setNewCaseDesc] = useState('');
 
   const selectedCase = cases.find(c => c.case_id === selectedCaseId);
   const selectedClient = clients.find(c => c.client_id === selectedClientId);
@@ -41,6 +45,16 @@ export default function Header({
     onCreateClient(name);
     setNewClientName('');
     setShowNewClientInput(false);
+  };
+
+  const handleNewCaseSubmit = () => {
+    const desc = newCaseDesc.trim();
+    if (!desc || !selectedClientId) return;
+    if (onCreateCase) {
+      onCreateCase(selectedClientId, desc);
+    }
+    setNewCaseDesc('');
+    setShowNewCaseInput(false);
   };
 
   return (
@@ -90,6 +104,33 @@ export default function Header({
                       </div>
                     </DropdownMenuItem>
                   ))}
+                  <DropdownMenuItem
+                    onClick={(e) => { e.preventDefault(); setShowNewCaseInput(true); }}
+                    className="text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors cursor-pointer mt-1 font-medium"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-2" />
+                    New Case
+                  </DropdownMenuItem>
+                  {showNewCaseInput && selectedClientId === clientCases[0]?.client_id && (
+                    <div className="px-2 py-2 mt-1 bg-black/20 rounded-md">
+                      <input
+                        type="text"
+                        placeholder="Case description..."
+                        value={newCaseDesc}
+                        onChange={e => setNewCaseDesc(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleNewCaseSubmit(); }}
+                        autoFocus
+                        className="w-full bg-nblm-bg border border-nblm-border rounded-lg px-2 py-1 text-sm text-nblm-text focus:outline-none focus:border-nblm-text-muted placeholder-nblm-text-muted"
+                      />
+                      <button
+                        onClick={handleNewCaseSubmit}
+                        disabled={!newCaseDesc.trim()}
+                        className="mt-2 w-full bg-white text-black text-xs font-medium py-1 rounded hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Create
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </DropdownMenuContent>

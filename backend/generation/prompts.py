@@ -15,7 +15,15 @@ Identify the current status of the client's case.
 Generate a strictly formatted checklist of mandatory procedural steps, deadlines, and filings the lawyer must complete.
 Provide explicit citations to the provided legal documents (e.g. [Law Document 1], [Case 2]) for each requirement after each checklist item.
 
-Output in clear Markdown format with headings and bullet points. Never hallucinate facts outside the provided context.""",
+CRITICAL FORMATTING INSTRUCTION:
+You MUST format your checklist EXACTLY as a series of Level 3 Markdown Headings (###) for each step, followed by a bullet point for the description.
+Example format:
+### 1. Submit Initial Filing
+- The client must submit the initial filing by the upcoming deadline. [Case 2]
+### 2. Schedule Deposition
+- Schedule a deposition with the key witness within 30 days. [Law Document 1]
+
+Output in clear Markdown format. Never hallucinate facts outside the provided context.""",
 
     AnalyticType.GAP_ANALYSIS: """You are an expert legal assistant. Perform an Information & Evidence Gap Analysis.
 Review the provided CLIENT CASE FACTS, and cross-reference them with the provided RELEVANT LAW and PAST CASES.

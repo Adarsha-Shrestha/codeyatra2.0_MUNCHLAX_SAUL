@@ -2,25 +2,13 @@
 
 import { motion } from 'motion/react';
 import { ArrowUpRight } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { AIResponse, AISource, ModelId } from '@/types';
 
 // ─── Inline citation parser ───────────────────────────────────────────────────
 
-type TextSegment = { type: 'text'; text: string };
 type CitationSegment = { type: 'citation'; id: number; source: AISource | undefined };
-type Segment = TextSegment | CitationSegment;
-
-function parseSegments(text: string, sources: AISource[]): Segment[] {
-  const parts = text.split(/(\[SOURCE \d+\])/g);
-  return parts.map((part) => {
-    const match = part.match(/^\[SOURCE (\d+)\]$/);
-    if (match) {
-      const id = parseInt(match[1], 10);
-      return { type: 'citation', id, source: sources.find((s) => s.id === id) };
-    }
-    return { type: 'text', text: part };
-  });
-}
 
 // ─── Inline Citation Badge ────────────────────────────────────────────────────
 
@@ -56,24 +44,57 @@ function AnswerText({
   showCitations: boolean;
   onSourceClick?: (src: AISource) => void;
 }) {
+  let processedAnswer = answer;
   if (!showCitations) {
-    const clean = answer.replace(/\[SOURCE \d+\]/g, '').replace(/\s{2,}/g, ' ').trim();
-    return (
-      <p className="text-[15px] leading-relaxed text-nblm-text whitespace-pre-wrap">{clean}</p>
-    );
+    processedAnswer = answer.replace(/\[SOURCE \d+\]/g, '').replace(/\s{2,}/g, ' ').trim();
   }
 
-  const segments = parseSegments(answer, sources);
+  // Pre-process citations if citations are enabled so markdown renderer can handle them
+  // A clean way is to replace [SOURCE X] with custom span elements but since we map Markdown components,
+  // we can inject a custom markdown format or handle text substitution.
+  // For simplicity, we can convert [SOURCE X] into a pseudo-markdown link: `[cite-X](cite-X)`
+  if (showCitations) {
+    processedAnswer = processedAnswer.replace(/\[SOURCE (\d+)\]/g, '[cite-$1](cite-$1)');
+  }
+
   return (
-    <p className="text-[15px] leading-relaxed text-nblm-text whitespace-pre-wrap">
-      {segments.map((seg, i) =>
-        seg.type === 'text' ? (
-          <span key={i}>{seg.text}</span>
-        ) : (
-          <CitationBadge key={i} seg={seg as CitationSegment} onClick={onSourceClick} />
-        )
-      )}
-    </p>
+    <div className="prose prose-invert prose-zinc max-w-none text-[15px] leading-relaxed text-nblm-text mb-4
+      prose-headings:font-bold prose-headings:text-zinc-100 prose-headings:mt-6 prose-headings:mb-3
+      prose-h1:text-xl prose-h2:text-lg prose-h3:text-base
+      prose-p:mb-4 prose-p:last:mb-0
+      prose-a:text-blue-400 prose-a:no-underline hover:prose-a:text-blue-300
+      prose-strong:text-zinc-200
+      prose-ul:list-disc prose-ul:ml-5 prose-ul:mb-4
+      prose-ol:list-decimal prose-ol:ml-5 prose-ol:mb-4
+      prose-li:my-1
+      prose-blockquote:border-l-2 prose-blockquote:border-zinc-700 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-zinc-400
+      prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-pre:rounded-lg
+      prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-zinc-800 prose-code:rounded-md prose-code:text-sm
+    ">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ node, ...props }) => {
+            const href = props.href || '';
+            // Match our pseudo citation link
+            const citeMatch = href.match(/^cite-(\d+)$/);
+            if (citeMatch) {
+              const id = parseInt(citeMatch[1], 10);
+              const src = sources.find((s) => s.id === id);
+              return (
+                <CitationBadge
+                  seg={{ type: 'citation', id, source: src }}
+                  onClick={onSourceClick}
+                />
+              );
+            }
+            return <a {...props}>{props.children}</a>;
+          },
+        }}
+      >
+        {processedAnswer}
+      </ReactMarkdown>
+    </div>
   );
 }
 
