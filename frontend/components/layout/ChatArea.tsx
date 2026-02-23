@@ -145,19 +145,19 @@ export default function ChatArea({
     return (
       <div className="flex-1 flex flex-col bg-nblm-panel h-full relative overflow-hidden">
         {/* Source Toolbar */}
-        <div className="p-4 flex items-center justify-between border-b border-zinc-800 shrink-0 bg-nblm-panel sticky top-0 z-10 shadow-sm">
+        <div className="p-4 flex items-center justify-between border-b border-nblm-border shrink-0 bg-nblm-panel sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-3">
             <button
               onClick={onToggleLeft}
               title={leftOpen ? 'Collapse sources' : 'Expand sources'}
-              className={`hidden md:flex hover:text-white transition-colors p-1 ${leftOpen ? 'text-zinc-500' : 'text-zinc-300'}`}
+              className={`hidden md:flex hover:text-nblm-text transition-colors p-1 ${leftOpen ? 'text-nblm-text-muted' : 'text-nblm-text'}`}
             >
               <PanelLeft className="w-4 h-4" />
             </button>
             <h2 className="text-[13px] font-medium text-zinc-400 tracking-wide flex items-center gap-2 truncate max-w-50 md:max-w-md">
               <span className="truncate">{title}</span>
               {!isString && sourceObj && (
-                <span className="bg-zinc-800/80 text-[10px] px-1.5 py-0.5 rounded text-zinc-400 uppercase tracking-wider shrink-0 border border-zinc-700/50">
+                <span className="saul-type-badge text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 border">
                   Type {sourceObj.dataType}
                 </span>
               )}
@@ -176,14 +176,14 @@ export default function ChatArea({
             <button
               onClick={onClearSource}
               title="Close source view"
-              className="hover:text-white text-zinc-400 transition-colors p-1 ml-2 bg-zinc-800/50 hover:bg-zinc-700 rounded-full"
+              className="saul-icon-close transition-colors p-1 ml-2 rounded-full"
             >
               <X className="w-4 h-4" />
             </button>
             <button
               onClick={onToggleRight}
               title={rightOpen ? 'Collapse contents' : 'Expand contents'}
-              className={`hidden md:flex hover:text-white transition-colors p-1 ${rightOpen ? 'text-zinc-500' : 'text-zinc-300'}`}
+              className={`hidden md:flex hover:text-nblm-text transition-colors p-1 ${rightOpen ? 'text-nblm-text-muted' : 'text-nblm-text'}`}
             >
               <PanelRight className="w-4 h-4" />
             </button>
@@ -233,7 +233,7 @@ export default function ChatArea({
           <button
             onClick={onToggleLeft}
             title={leftOpen ? 'Collapse sources' : 'Expand sources'}
-            className={`hidden md:flex hover:text-white transition-colors p-1 ${leftOpen ? 'text-zinc-500' : 'text-nblm-text'}`}
+            className={`hidden md:flex hover:text-nblm-text transition-colors p-1 ${leftOpen ? 'text-nblm-text-muted' : 'text-nblm-text'}`}
           >
             <PanelLeft className="w-5 h-5" />
           </button>
@@ -374,13 +374,13 @@ export default function ChatArea({
       <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-nblm-panel via-nblm-panel to-transparent pt-12 pb-6 px-4 md:px-10 z-20">
         <div className="max-w-3xl mx-auto">
           {messages.length > 0 && (
-            <p className="text-[11px] text-zinc-500 text-center mb-4">Today • {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+            <p className="text-[11px] text-nblm-text-muted text-center mb-4">Today • {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
            
           )}
-          <div className="relative bg-nblm-bg rounded-full border border-nblm-border shadow-lg overflow-hidden focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
+          <div className="relative bg-nblm-bg rounded-full border border-nblm-border shadow-lg overflow-hidden focus-within:ring-1 focus-within:ring-nblm-border transition-all">
             <textarea
               placeholder="Start typing..."
-              className="w-full bg-transparent text-nblm-text px-4 py-4 pr-14 min-h-14 resize-none focus:outline-none text-[15px] placeholder-zinc-600"
+              className="w-full bg-transparent text-nblm-text px-4 py-4 pr-14 min-h-14 resize-none focus:outline-none text-[15px] placeholder-nblm-text-muted"
               rows={1}
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
@@ -396,7 +396,7 @@ export default function ChatArea({
               </button>
             </div>
           </div>
-          <p className="text-[10px] text-zinc-600 text-center mt-3 font-medium">
+          <p className="text-[10px] text-nblm-text-muted text-center mt-3 font-medium">
             Saul can be inaccurate: please double check its responses.
           </p>
         </div>

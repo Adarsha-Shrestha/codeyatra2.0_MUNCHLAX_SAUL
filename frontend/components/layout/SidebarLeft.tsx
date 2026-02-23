@@ -65,7 +65,7 @@ export default function SidebarLeft({ onToggle, onSourceSelect, onLoadSession }:
           <button
             onClick={() => setTab('sources')}
             className={`px-3 py-1 rounded-full text-[12px] font-semibold transition-all ${
-              tab === 'sources' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
+              tab === 'sources' ? 'saul-tab-active' : 'saul-tab-inactive'
             }`}
           >
             Sources
@@ -73,14 +73,14 @@ export default function SidebarLeft({ onToggle, onSourceSelect, onLoadSession }:
           <button
             onClick={() => { setTab('history'); setHistoryRefreshKey(k => k + 1); }}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold transition-all ${
-              tab === 'history' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
+              tab === 'history' ? 'saul-tab-active' : 'saul-tab-inactive'
             }`}
           >
             <History className="w-3 h-3" />
             History
           </button>
         </div>
-        <button onClick={onToggle} title="Collapse sidebar" className="text-zinc-400 hover:text-white transition-colors">
+        <button onClick={onToggle} title="Collapse sidebar" className="text-nblm-text-muted hover:text-nblm-text transition-colors">
           <LayoutPanelLeft className="w-5 h-5" />
         </button>
       </div>
@@ -103,7 +103,7 @@ export default function SidebarLeft({ onToggle, onSourceSelect, onLoadSession }:
       <div className="px-4 pb-4">
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="w-full flex items-center justify-center gap-2 bg-nblm-panel hover:bg-[#2b2520] text-[15px] font-medium py-2.5 rounded-full border border-nblm-border transition-colors text-white"
+          className="w-full flex items-center justify-center gap-2 bg-nblm-panel hover:bg-nblm-border text-[15px] font-medium py-2.5 rounded-full border border-nblm-border transition-colors text-nblm-text"
         >
           <Plus className="w-5 h-5" />
           Add sources
@@ -117,7 +117,7 @@ export default function SidebarLeft({ onToggle, onSourceSelect, onLoadSession }:
           <input
             type="text"
             placeholder="Search the web for new sources"
-            className="w-full bg-[#13171a] border border-nblm-border rounded-full py-2 pl-10 pr-3 text-[15px] focus:outline-none focus:border-nblm-text-muted placeholder-zinc-500 text-nblm-text"
+            className="w-full bg-nblm-bg border border-nblm-border rounded-full py-2 pl-10 pr-3 text-[15px] focus:outline-none focus:border-nblm-text-muted placeholder-nblm-text-muted text-nblm-text"
           />
         </div>
       </div>
@@ -136,11 +136,11 @@ export default function SidebarLeft({ onToggle, onSourceSelect, onLoadSession }:
       </div>
 
       {/* Select All */}
-      <div className="px-5 py-2 flex items-center justify-between text-[13px] text-zinc-400">
+      <div className="px-5 py-2 flex items-center justify-between text-[13px] text-nblm-text-muted">
         <span>Select all sources</span>
         <button
           onClick={toggleAllSelection}
-          className="w-5 h-5 rounded bg-nblm-panel border border-zinc-600 flex items-center justify-center transition-colors"
+          className="w-5 h-5 rounded bg-nblm-panel border border-nblm-border flex items-center justify-center transition-colors"
         >
           {selectedIds.size > 0 && selectedIds.size === sources.length && (
             <Check className="w-4 h-4 text-white" />
@@ -158,9 +158,9 @@ export default function SidebarLeft({ onToggle, onSourceSelect, onLoadSession }:
               <li
                 key={source.id}
                 onClick={() => onSourceSelect(source)}
-                className="px-4 py-2.5 flex items-start gap-3 hover:bg-zinc-800/50 cursor-pointer group transition-colors"
+                className="px-4 py-2.5 flex items-start gap-3 hover:bg-nblm-panel cursor-pointer group transition-colors"
               >
-                <div className="bg-[#181511] p-2 rounded mt-0.5 border border-nblm-border">
+                <div className="bg-nblm-bg p-2 rounded mt-0.5 border border-nblm-border">
                   {getIconForSource(source)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -174,7 +174,7 @@ export default function SidebarLeft({ onToggle, onSourceSelect, onLoadSession }:
                   className={`w-5 h-5 rounded border flex items-center justify-center mt-1 shrink-0 transition-all ${
                     selectedIds.has(source.id)
                       ? 'bg-primary border-primary'
-                      : 'bg-transparent border-zinc-600 group-hover:border-zinc-500'
+                      : 'bg-transparent border-nblm-border group-hover:border-nblm-text-muted'
                   }`}
                 >
                   {selectedIds.has(source.id) && <Check className="w-4 h-4 text-white" />}

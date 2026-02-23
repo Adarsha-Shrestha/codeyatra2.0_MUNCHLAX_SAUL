@@ -27,7 +27,7 @@ export default function ChatHistoryPanel({ onSelectSession, refreshKey }: ChatHi
   if (sessions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-        <MessageSquare className="w-10 h-10 text-zinc-700 mb-4" />
+        <MessageSquare className="w-10 h-10 text-nblm-border mb-4" />
         <p className="text-[14px] text-zinc-500 font-medium">No saved chats yet</p>
         <p className="text-[12px] text-zinc-600 mt-1">
           Use the ⋯ menu in chat to save a conversation.
@@ -51,15 +51,15 @@ export default function ChatHistoryPanel({ onSelectSession, refreshKey }: ChatHi
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-start gap-2.5 min-w-0">
-                <MessageSquare className="w-3.5 h-3.5 text-zinc-600 shrink-0 mt-0.5" />
+                <MessageSquare className="w-3.5 h-3.5 text-nblm-text-muted shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-nblm-text group-hover:text-zinc-300 truncate leading-snug transition-colors">
+                  <p className="text-[13px] font-medium text-nblm-text group-hover:text-nblm-text truncate leading-snug transition-colors">
                     {session.title}
                   </p>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <Clock className="w-2.5 h-2.5 text-zinc-600" />
-                    <span className="text-[11px] text-zinc-600">{formatSessionDate(session.updatedAt)}</span>
-                    <span className="text-[11px] text-zinc-700 ml-1">
+                    <Clock className="w-2.5 h-2.5 text-nblm-text-muted" />
+                    <span className="text-[11px] text-nblm-text-muted">{formatSessionDate(session.updatedAt)}</span>
+                    <span className="text-[11px] text-nblm-text-muted ml-1">
                       · {session.messages.length} msg{session.messages.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -67,7 +67,7 @@ export default function ChatHistoryPanel({ onSelectSession, refreshKey }: ChatHi
               </div>
               <button
                 onClick={(e) => handleDelete(e, session.id)}
-                className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-zinc-700 text-zinc-500 hover:text-red-400 transition-all"
+                className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-nblm-border text-nblm-text-muted hover:text-red-400 transition-all"
                 title="Delete chat"
               >
                 <Trash2 className="w-3.5 h-3.5" />

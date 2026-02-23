@@ -36,7 +36,7 @@ function CitationBadge({
     <button
       onClick={() => seg.source && onClick?.(seg.source)}
       title={title}
-      className="inline-flex items-center justify-center align-middle mx-0.5 px-1.5 py-0.5 text-[11px] font-semibold rounded-md bg-zinc-700/60 hover:bg-zinc-600 text-zinc-300 hover:text-white border border-zinc-600/50 transition-colors leading-none relative -top-0.5 cursor-pointer"
+      className="inline-flex items-center justify-center align-middle mx-0.5 px-1.5 py-0.5 text-[11px] font-semibold rounded-md saul-citation border transition-colors leading-none relative -top-0.5 cursor-pointer"
     >
       {seg.id}
     </button>
