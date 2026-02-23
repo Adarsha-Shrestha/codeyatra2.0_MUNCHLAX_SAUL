@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import BlurText from '@/components/ui/BlurText';
 import SplitText from '@/components/ui/SplitText';
 import type { ChatAreaProps, SourceInfo, Message } from '@/types';
+import ModelSelector from '@/components/layout/ModelSelector';
 
 export default function ChatArea({
   activeSource,
@@ -200,7 +201,7 @@ export default function ChatArea({
         </div>
 
         <div className="flex gap-2 text-zinc-400 items-center">
-          <button className="hover:text-nblm-text transition-colors p-1"><Settings2 className="w-5 h-5" /></button>
+          <ModelSelector />
           <button className="hover:text-nblm-text transition-colors p-1"><MoreVertical className="w-5 h-5" /></button>
           <button
             onClick={onToggleRight}
@@ -286,9 +287,10 @@ export default function ChatArea({
       <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-nblm-panel via-nblm-panel to-transparent pt-12 pb-6 px-4 md:px-10 z-20">
         <div className="max-w-3xl mx-auto">
           {messages.length > 0 && (
-            <p className="text-[11px] text-zinc-500 text-center mb-4">Today • 7:17 PM</p>
+            <p className="text-[11px] text-zinc-500 text-center mb-4">Today • {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+           
           )}
-          <div className="relative bg-nblm-bg rounded-3xl border border-nblm-border shadow-lg overflow-hidden focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
+          <div className="relative bg-nblm-bg rounded-full border border-nblm-border shadow-lg overflow-hidden focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
             <textarea
               placeholder="Start typing..."
               className="w-full bg-transparent text-nblm-text px-4 py-4 pr-14 min-h-14 resize-none focus:outline-none text-[15px] placeholder-zinc-600"
@@ -297,7 +299,7 @@ export default function ChatArea({
               onChange={e => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <div className="absolute right-2 bottom-2 max-h-7.5 flex items-center gap-3">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-3">
               <button
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim()}
