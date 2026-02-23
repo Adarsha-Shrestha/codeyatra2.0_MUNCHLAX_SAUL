@@ -28,7 +28,7 @@ class AnalyticsOrchestrator:
         # 2. Retrieve Context (Law and Past Cases)
         # For the query, we use a truncated version of the case text or just the first chunk
         search_query = results["documents"][0][:1000] 
-        db_names = [settings.LAW_DB_NAME, settings.CASES_DB_NAME]
+        db_names = [settings.LAW_DB_NAME, settings.CASES_DB_NAME, settings.CLIENT_DB_NAME]
         
         raw_results = QuerySearcher.search(search_query, db_names=db_names, top_k=7)
         ranked_results = ResultRanker.rank_and_filter(raw_results)

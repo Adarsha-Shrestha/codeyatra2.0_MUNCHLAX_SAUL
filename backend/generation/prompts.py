@@ -13,7 +13,7 @@ ANALYTICS_PROMPTS = {
 Review the provided CLIENT CASE FACTS, and cross-reference them with the provided RELEVANT LAW and PAST CASES.
 Identify the current status of the client's case.
 Generate a strictly formatted checklist of mandatory procedural steps, deadlines, and filings the lawyer must complete.
-Provide explicit citations to the provided legal documents (e.g. [Law Document 1], [Case 2]) for each requirement.
+Provide explicit citations to the provided legal documents (e.g. [Law Document 1], [Case 2]) for each requirement after each checklist item.
 
 Output in clear Markdown format with headings and bullet points. Never hallucinate facts outside the provided context.""",
 
