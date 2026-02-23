@@ -30,8 +30,14 @@ from config.postgres import (
     QueryLog,
     IngestionStatus,
     TargetDB,
+    FileType,
+    Client,
+    Case,
+    CaseFile,
+    PastCase,
+    Law,
 )
-from ingest_cli import ingest_file, DB_MAPPING, SUPPORTED_EXTENSIONS
+from ingest_cli import ingest_file, ingest_case_file, DB_MAPPING, SUPPORTED_EXTENSIONS, MIME_MAP
 
 router = APIRouter()
 
@@ -68,6 +74,86 @@ class CaseOut(BaseModel):
     description: Optional[str]
     created_at: datetime.datetime
     file_count: int
+
+    class Config:
+        from_attributes = True
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# NEW Pydantic schemas for new tables
+# ──────────────────────────────────────────────────────────────────────────────
+
+class ClientOut(BaseModel):
+    client_id: int
+    client_name: str
+    phone: Optional[str]
+    address: Optional[str]
+    created_at: datetime.datetime
+    case_count: int
+
+    class Config:
+        from_attributes = True
+
+
+class ClientCreate(BaseModel):
+    client_name: str
+    phone: Optional[str] = None
+    address: Optional[str] = None
+
+
+class CaseNewOut(BaseModel):
+    case_id: int
+    client_id: int
+    description: Optional[str]
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    file_count: int
+
+    class Config:
+        from_attributes = True
+
+
+class CaseCreate(BaseModel):
+    client_id: int
+    description: Optional[str] = None
+
+
+class CaseFileOut(BaseModel):
+    file_id: int
+    case_id: int
+    filename: str
+    extension: Optional[str]
+    mime_type: Optional[str]
+    file_size_bytes: Optional[int]
+    status: str
+    chunk_count: Optional[int]
+    error_message: Optional[str]
+    uploaded_at: datetime.datetime
+    ingested_at: Optional[datetime.datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class PastCaseOut(BaseModel):
+    past_case_id: int
+    case_name: str
+    filename: Optional[str]
+    extension: Optional[str]
+    file_size_bytes: Optional[int]
+    uploaded_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+
+class LawOut(BaseModel):
+    id: int
+    law_of_country: str
+    filename: Optional[str]
+    extension: Optional[str]
+    file_size_bytes: Optional[int]
+    uploaded_at: datetime.datetime
 
     class Config:
         from_attributes = True
@@ -318,3 +404,416 @@ def download_file(file_id: int, db: Session = Depends(get_db)):
             "Content-Length": str(len(row.file_data)),
         },
     )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NEW ENDPOINTS - Client, Case, File Management
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Client endpoints
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/clients", response_model=List[ClientOut], summary="List all clients")
+def list_clients(db: Session = Depends(get_db)):
+    """Returns all client IDs for the frontend dropdown/selection."""
+    clients = db.query(Client).order_by(Client.created_at.desc()).all()
+    return [
+        ClientOut(
+            client_id=c.client_id,
+            client_name=c.client_name,
+            phone=c.phone,
+            address=c.address,
+            created_at=c.created_at,
+            case_count=len(c.cases),
+        )
+        for c in clients
+    ]
+
+
+@router.post("/clients", response_model=ClientOut, summary="Create a new client")
+def create_client(client_data: ClientCreate, db: Session = Depends(get_db)):
+    """Create a new client record."""
+    client = Client(
+        client_name=client_data.client_name,
+        phone=client_data.phone,
+        address=client_data.address,
+    )
+    db.add(client)
+    db.commit()
+    db.refresh(client)
+    return ClientOut(
+        client_id=client.client_id,
+        client_name=client.client_name,
+        phone=client.phone,
+        address=client.address,
+        created_at=client.created_at,
+        case_count=0,
+    )
+
+
+@router.get("/clients/{client_id}", response_model=ClientOut, summary="Get a single client")
+def get_client(client_id: int, db: Session = Depends(get_db)):
+    """Get details of a specific client."""
+    client = db.query(Client).filter(Client.client_id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found.")
+    return ClientOut(
+        client_id=client.client_id,
+        client_name=client.client_name,
+        phone=client.phone,
+        address=client.address,
+        created_at=client.created_at,
+        case_count=len(client.cases),
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Case endpoints (linked to clients)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/clients/{client_id}/cases", response_model=List[CaseNewOut], summary="List cases for a client")
+def list_cases_for_client(client_id: int, db: Session = Depends(get_db)):
+    """Returns all cases for a specific client."""
+    client = db.query(Client).filter(Client.client_id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found.")
+    
+    return [
+        CaseNewOut(
+            case_id=case.case_id,
+            client_id=case.client_id,
+            description=case.description,
+            created_at=case.created_at,
+            updated_at=case.updated_at,
+            file_count=len(case.files),
+        )
+        for case in client.cases
+    ]
+
+
+@router.post("/clients/{client_id}/cases", response_model=CaseNewOut, summary="Create a case for a client")
+def create_case_for_client(client_id: int, case_data: CaseCreate, db: Session = Depends(get_db)):
+    """Create a new case for the specified client."""
+    client = db.query(Client).filter(Client.client_id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found.")
+    
+    case = Case(
+        client_id=client_id,
+        description=case_data.description,
+    )
+    db.add(case)
+    db.commit()
+    db.refresh(case)
+    return CaseNewOut(
+        case_id=case.case_id,
+        client_id=case.client_id,
+        description=case.description,
+        created_at=case.created_at,
+        updated_at=case.updated_at,
+        file_count=0,
+    )
+
+
+@router.get("/cases-new/{case_id}", response_model=CaseNewOut, summary="Get a specific case")
+def get_case(case_id: int, db: Session = Depends(get_db)):
+    """Get details of a specific case."""
+    case = db.query(Case).filter(Case.case_id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found.")
+    return CaseNewOut(
+        case_id=case.case_id,
+        client_id=case.client_id,
+        description=case.description,
+        created_at=case.created_at,
+        updated_at=case.updated_at,
+        file_count=len(case.files),
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Case Files endpoints (files for a specific case)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/cases-new/{case_id}/files", response_model=List[CaseFileOut], summary="List files for a case")
+def list_files_for_case(case_id: int, db: Session = Depends(get_db)):
+    """Returns all files associated with a specific case."""
+    case = db.query(Case).filter(Case.case_id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found.")
+    
+    return [
+        CaseFileOut(
+            file_id=f.file_id,
+            case_id=f.case_id,
+            filename=f.filename,
+            extension=f.extension,
+            mime_type=f.mime_type,
+            file_size_bytes=f.file_size_bytes,
+            status=f.status.value if hasattr(f.status, "value") else str(f.status),
+            chunk_count=f.chunk_count,
+            error_message=f.error_message,
+            uploaded_at=f.uploaded_at,
+            ingested_at=f.ingested_at,
+        )
+        for f in case.files
+    ]
+
+
+@router.get("/case-files/{file_id}/download", summary="Download a case file")
+def download_case_file(file_id: int, db: Session = Depends(get_db)):
+    """Download the original file from case_file_table."""
+    row = db.query(CaseFile).filter(CaseFile.file_id == file_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="File not found.")
+    if not row.file:
+        raise HTTPException(status_code=404, detail="No binary data stored for this file.")
+    
+    mime = row.mime_type or "application/octet-stream"
+    return Response(
+        content=row.file,
+        media_type=mime,
+        headers={
+            "Content-Disposition": f'attachment; filename="{row.filename}"',
+            "Content-Length": str(len(row.file)),
+        },
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Past Cases endpoints (historical reference - no ingestion)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/past-cases", response_model=List[PastCaseOut], summary="List all past cases")
+def list_past_cases(db: Session = Depends(get_db)):
+    """Returns all historical/reference case documents."""
+    past_cases = db.query(PastCase).order_by(PastCase.uploaded_at.desc()).all()
+    return [
+        PastCaseOut(
+            past_case_id=pc.past_case_id,
+            case_name=pc.case_name,
+            filename=pc.filename,
+            extension=pc.extension,
+            file_size_bytes=pc.file_size_bytes,
+            uploaded_at=pc.uploaded_at,
+        )
+        for pc in past_cases
+    ]
+
+
+@router.get("/past-cases/{past_case_id}/download", summary="Download a past case file")
+def download_past_case(past_case_id: int, db: Session = Depends(get_db)):
+    """Download the original file from past_case_table."""
+    row = db.query(PastCase).filter(PastCase.past_case_id == past_case_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Past case not found.")
+    if not row.case_file:
+        raise HTTPException(status_code=404, detail="No binary data stored for this past case.")
+    
+    mime = row.mime_type or "application/octet-stream"
+    filename = row.filename or f"past_case_{past_case_id}"
+    return Response(
+        content=row.case_file,
+        media_type=mime,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(row.case_file)),
+        },
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Law endpoints (constitution/law reference - no ingestion)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/laws", response_model=List[LawOut], summary="List all law documents")
+def list_laws(db: Session = Depends(get_db)):
+    """Returns all law/constitution reference documents."""
+    laws = db.query(Law).order_by(Law.uploaded_at.desc()).all()
+    return [
+        LawOut(
+            id=law.id,
+            law_of_country=law.law_of_country,
+            filename=law.filename,
+            extension=law.extension,
+            file_size_bytes=law.file_size_bytes,
+            uploaded_at=law.uploaded_at,
+        )
+        for law in laws
+    ]
+
+
+@router.get("/laws/{law_id}/download", summary="Download a law document")
+def download_law(law_id: int, db: Session = Depends(get_db)):
+    """Download the original file from law_table."""
+    row = db.query(Law).filter(Law.id == law_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Law document not found.")
+    if not row.constitution_file:
+        raise HTTPException(status_code=404, detail="No binary data stored for this law document.")
+    
+    mime = row.mime_type or "application/octet-stream"
+    filename = row.filename or f"law_{law_id}"
+    return Response(
+        content=row.constitution_file,
+        media_type=mime,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(row.constitution_file)),
+        },
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# UNIFIED UPLOAD ENDPOINT - handles all file types based on 'file_type' param
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.post("/upload-file", summary="Upload file with type-specific handling")
+async def upload_file_by_type(
+    file: UploadFile = File(...),
+    file_type: str = Form(..., description="One of: case_file, past_case, law"),
+    case_id: Optional[int] = Form(None, description="Required when file_type='case_file'"),
+    case_name: Optional[str] = Form(None, description="Required when file_type='past_case'"),
+    law_of_country: Optional[str] = Form(None, description="Required when file_type='law'"),
+    db: Session = Depends(get_db),
+):
+    """
+    Unified file upload endpoint that handles three file types differently:
+    
+    - case_file: Stored in case_file_table + runs ingestion pipeline (ChromaDB)
+    - past_case: Stored in past_case_table only (NO ingestion)
+    - law: Stored in law_table only (NO ingestion)
+    """
+    # Validate file_type
+    valid_types = ["case_file", "past_case", "law"]
+    if file_type not in valid_types:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"file_type must be one of {valid_types}"
+        )
+    
+    # Validate required fields based on type
+    if file_type == "case_file" and not case_id:
+        raise HTTPException(status_code=400, detail="case_id is required when file_type='case_file'")
+    if file_type == "past_case" and not case_name:
+        raise HTTPException(status_code=400, detail="case_name is required when file_type='past_case'")
+    if file_type == "law" and not law_of_country:
+        raise HTTPException(status_code=400, detail="law_of_country is required when file_type='law'")
+    
+    # Get file info
+    filename = file.filename or "upload"
+    ext = os.path.splitext(filename)[1].lower()
+    
+    if ext not in SUPPORTED_EXTENSIONS:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported file type '{ext}'. Allowed: {SUPPORTED_EXTENSIONS}",
+        )
+    
+    # Read file bytes
+    try:
+        file_bytes = await file.read()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read upload: {e}")
+    
+    mime_type = MIME_MAP.get(ext, "application/octet-stream")
+    file_size = len(file_bytes)
+    
+    # ══════════════════════════════════════════════════════════════════════════
+    # CASE_FILE: Store + Ingest (ChromaDB)
+    # ══════════════════════════════════════════════════════════════════════════
+    if file_type == "case_file":
+        # Verify case exists
+        case = db.query(Case).filter(Case.case_id == case_id).first()
+        if not case:
+            raise HTTPException(status_code=404, detail=f"Case with case_id={case_id} not found.")
+        
+        # Create CaseFile record
+        case_file = CaseFile(
+            case_id=case_id,
+            filename=filename,
+            extension=ext,
+            file=file_bytes,
+            mime_type=mime_type,
+            file_size_bytes=file_size,
+            status=IngestionStatus.pending,
+        )
+        db.add(case_file)
+        db.commit()
+        db.refresh(case_file)
+        
+        # Run ingestion pipeline
+        result = ingest_case_file(
+            file_id=case_file.file_id,
+            filename=filename,
+            file_bytes=file_bytes,
+            case_id=case_id,
+            db_session=db,
+        )
+        
+        if result["success"]:
+            return {
+                "status": "success",
+                "file_type": "case_file",
+                "file_id": case_file.file_id,
+                "filename": filename,
+                "chunks": result.get("chunks", 0),
+                "message": "File stored and ingested into ChromaDB",
+            }
+        else:
+            return {
+                "status": "partial",
+                "file_type": "case_file",
+                "file_id": case_file.file_id,
+                "filename": filename,
+                "message": f"File stored but ingestion failed: {result.get('error')}",
+            }
+    
+    # ══════════════════════════════════════════════════════════════════════════
+    # PAST_CASE: Store only (NO ingestion)
+    # ══════════════════════════════════════════════════════════════════════════
+    elif file_type == "past_case":
+        past_case = PastCase(
+            case_name=case_name,
+            case_file=file_bytes,
+            filename=filename,
+            extension=ext,
+            mime_type=mime_type,
+            file_size_bytes=file_size,
+        )
+        db.add(past_case)
+        db.commit()
+        db.refresh(past_case)
+        
+        return {
+            "status": "success",
+            "file_type": "past_case",
+            "past_case_id": past_case.past_case_id,
+            "filename": filename,
+            "message": "Past case file stored (no ingestion performed)",
+        }
+    
+    # ══════════════════════════════════════════════════════════════════════════
+    # LAW: Store only (NO ingestion)
+    # ══════════════════════════════════════════════════════════════════════════
+    elif file_type == "law":
+        law = Law(
+            law_of_country=law_of_country,
+            constitution_file=file_bytes,
+            filename=filename,
+            extension=ext,
+            mime_type=mime_type,
+            file_size_bytes=file_size,
+        )
+        db.add(law)
+        db.commit()
+        db.refresh(law)
+        
+        return {
+            "status": "success",
+            "file_type": "law",
+            "law_id": law.id,
+            "filename": filename,
+            "message": "Law document stored (no ingestion performed)",
+        }
