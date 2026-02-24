@@ -1,0 +1,25 @@
+{
+  "name": "codeyatra2.0_munchlax_saul",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adarsha-Shrestha/codeyatra2.0_MUNCHLAX_SAUL.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Adarsha-Shrestha/codeyatra2.0_MUNCHLAX_SAUL/issues"
+  },
+  "homepage": "https://github.com/Adarsha-Shrestha/codeyatra2.0_MUNCHLAX_SAUL#readme",
+  "dependencies": {
+    "tailwindcss": "^4.2.0",
+    "tailwindcss-animate": "^1.0.7"
+  }
+}
